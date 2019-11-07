@@ -1,4 +1,4 @@
-package zstd
+package zstd144
 
 import (
 	"bytes"
@@ -82,7 +82,7 @@ func TestStreamEmptySlice(t *testing.T) {
 	testCompressionDecompression(t, nil, []byte{})
 }
 
-func TestZstdReaderLong(t *testing.T) {
+func TestZstd144ReaderLong(t *testing.T) {
 	var long bytes.Buffer
 	for i := 0; i < 10000; i++ {
 		long.Write([]byte("Hellow World!"))

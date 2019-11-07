@@ -7,42 +7,42 @@
  * in the COPYING file in the root directory of this source tree).
  */
 
-#ifndef ZSTD_LDM_H
-#define ZSTD_LDM_H
+#ifndef ZSTD144_LDM_H
+#define ZSTD144_LDM_H
 
 #if defined (__cplusplus)
 extern "C" {
 #endif
 
 #include "zstd_compress_internal.h"   /* ldmParams_t, U32 */
-#include "zstd.h"   /* ZSTD_CCtx, size_t */
+#include "zstd.h"   /* ZSTD144_CCtx, size_t */
 
 /*-*************************************
 *  Long distance matching
 ***************************************/
 
-#define ZSTD_LDM_DEFAULT_WINDOW_LOG ZSTD_WINDOWLOG_LIMIT_DEFAULT
+#define ZSTD144_LDM_DEFAULT_WINDOW_LOG ZSTD144_WINDOWLOG_LIMIT_DEFAULT
 
 /**
- * ZSTD_ldm_generateSequences():
+ * ZSTD144_ldm_generateSequences():
  *
  * Generates the sequences using the long distance match finder.
  * Generates long range matching sequences in `sequences`, which parse a prefix
  * of the source. `sequences` must be large enough to store every sequence,
- * which can be checked with `ZSTD_ldm_getMaxNbSeq()`.
+ * which can be checked with `ZSTD144_ldm_getMaxNbSeq()`.
  * @returns 0 or an error code.
  *
- * NOTE: The user must have called ZSTD_window_update() for all of the input
- * they have, even if they pass it to ZSTD_ldm_generateSequences() in chunks.
+ * NOTE: The user must have called ZSTD144_window_update() for all of the input
+ * they have, even if they pass it to ZSTD144_ldm_generateSequences() in chunks.
  * NOTE: This function returns an error if it runs out of space to store
  *       sequences.
  */
-size_t ZSTD_ldm_generateSequences(
+size_t ZSTD144_ldm_generateSequences(
             ldmState_t* ldms, rawSeqStore_t* sequences,
             ldmParams_t const* params, void const* src, size_t srcSize);
 
 /**
- * ZSTD_ldm_blockCompress():
+ * ZSTD144_ldm_blockCompress():
  *
  * Compresses a block using the predefined sequences, along with a secondary
  * block compressor. The literals section of every sequence is passed to the
@@ -59,34 +59,34 @@ size_t ZSTD_ldm_generateSequences(
  * two. We handle that case correctly, and update `rawSeqStore` appropriately.
  * NOTE: This function does not return any errors.
  */
-size_t ZSTD_ldm_blockCompress(rawSeqStore_t* rawSeqStore,
-            ZSTD_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
+size_t ZSTD144_ldm_blockCompress(rawSeqStore_t* rawSeqStore,
+            ZSTD144_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD144_REP_NUM],
             void const* src, size_t srcSize);
 
 /**
- * ZSTD_ldm_skipSequences():
+ * ZSTD144_ldm_skipSequences():
  *
  * Skip past `srcSize` bytes worth of sequences in `rawSeqStore`.
  * Avoids emitting matches less than `minMatch` bytes.
- * Must be called for data with is not passed to ZSTD_ldm_blockCompress().
+ * Must be called for data with is not passed to ZSTD144_ldm_blockCompress().
  */
-void ZSTD_ldm_skipSequences(rawSeqStore_t* rawSeqStore, size_t srcSize,
+void ZSTD144_ldm_skipSequences(rawSeqStore_t* rawSeqStore, size_t srcSize,
     U32 const minMatch);
 
 
-/** ZSTD_ldm_getTableSize() :
+/** ZSTD144_ldm_getTableSize() :
  *  Estimate the space needed for long distance matching tables or 0 if LDM is
  *  disabled.
  */
-size_t ZSTD_ldm_getTableSize(ldmParams_t params);
+size_t ZSTD144_ldm_getTableSize(ldmParams_t params);
 
-/** ZSTD_ldm_getSeqSpace() :
+/** ZSTD144_ldm_getSeqSpace() :
  *  Return an upper bound on the number of sequences that can be produced by
  *  the long distance matcher, or 0 if LDM is disabled.
  */
-size_t ZSTD_ldm_getMaxNbSeq(ldmParams_t params, size_t maxChunkSize);
+size_t ZSTD144_ldm_getMaxNbSeq(ldmParams_t params, size_t maxChunkSize);
 
-/** ZSTD_ldm_adjustParameters() :
+/** ZSTD144_ldm_adjustParameters() :
  *  If the params->hashRateLog is not set, set it to its default value based on
  *  windowLog and params->hashLog.
  *
@@ -95,11 +95,11 @@ size_t ZSTD_ldm_getMaxNbSeq(ldmParams_t params, size_t maxChunkSize);
  *
  *  Ensures that the minMatchLength >= targetLength during optimal parsing.
  */
-void ZSTD_ldm_adjustParameters(ldmParams_t* params,
-                               ZSTD_compressionParameters const* cParams);
+void ZSTD144_ldm_adjustParameters(ldmParams_t* params,
+                               ZSTD144_compressionParameters const* cParams);
 
 #if defined (__cplusplus)
 }
 #endif
 
-#endif /* ZSTD_FAST_H */
+#endif /* ZSTD144_FAST_H */

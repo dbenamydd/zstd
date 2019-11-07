@@ -17,9 +17,9 @@
 #include "threading.h"
 
 /* create fake symbol to avoid empty translation unit warning */
-int g_ZSTD_threading_useless_symbol;
+int g_ZSTD144_threading_useless_symbol;
 
-#if defined(ZSTD_MULTITHREAD) && defined(_WIN32)
+#if defined(ZSTD144_MULTITHREAD) && defined(_WIN32)
 
 /**
  * Windows minimalist Pthread Wrapper, based on :
@@ -36,12 +36,12 @@ int g_ZSTD_threading_useless_symbol;
 
 static unsigned __stdcall worker(void *arg)
 {
-    ZSTD_pthread_t* const thread = (ZSTD_pthread_t*) arg;
+    ZSTD144_pthread_t* const thread = (ZSTD144_pthread_t*) arg;
     thread->arg = thread->start_routine(thread->arg);
     return 0;
 }
 
-int ZSTD_pthread_create(ZSTD_pthread_t* thread, const void* unused,
+int ZSTD144_pthread_create(ZSTD144_pthread_t* thread, const void* unused,
             void* (*start_routine) (void*), void* arg)
 {
     (void)unused;
@@ -55,7 +55,7 @@ int ZSTD_pthread_create(ZSTD_pthread_t* thread, const void* unused,
         return 0;
 }
 
-int ZSTD_pthread_join(ZSTD_pthread_t thread, void **value_ptr)
+int ZSTD144_pthread_join(ZSTD144_pthread_t thread, void **value_ptr)
 {
     DWORD result;
 
@@ -73,13 +73,13 @@ int ZSTD_pthread_join(ZSTD_pthread_t thread, void **value_ptr)
     }
 }
 
-#endif   /* ZSTD_MULTITHREAD */
+#endif   /* ZSTD144_MULTITHREAD */
 
-#if defined(ZSTD_MULTITHREAD) && DEBUGLEVEL >= 1 && !defined(_WIN32)
+#if defined(ZSTD144_MULTITHREAD) && DEBUGLEVEL >= 1 && !defined(_WIN32)
 
 #include <stdlib.h>
 
-int ZSTD_pthread_mutex_init(ZSTD_pthread_mutex_t* mutex, pthread_mutexattr_t const* attr)
+int ZSTD144_pthread_mutex_init(ZSTD144_pthread_mutex_t* mutex, pthread_mutexattr_t const* attr)
 {
     *mutex = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t));
     if (!*mutex)
@@ -87,7 +87,7 @@ int ZSTD_pthread_mutex_init(ZSTD_pthread_mutex_t* mutex, pthread_mutexattr_t con
     return pthread_mutex_init(*mutex, attr);
 }
 
-int ZSTD_pthread_mutex_destroy(ZSTD_pthread_mutex_t* mutex)
+int ZSTD144_pthread_mutex_destroy(ZSTD144_pthread_mutex_t* mutex)
 {
     if (!*mutex)
         return 0;
@@ -98,7 +98,7 @@ int ZSTD_pthread_mutex_destroy(ZSTD_pthread_mutex_t* mutex)
     }
 }
 
-int ZSTD_pthread_cond_init(ZSTD_pthread_cond_t* cond, pthread_condattr_t const* attr)
+int ZSTD144_pthread_cond_init(ZSTD144_pthread_cond_t* cond, pthread_condattr_t const* attr)
 {
     *cond = (pthread_cond_t*)malloc(sizeof(pthread_cond_t));
     if (!*cond)
@@ -106,7 +106,7 @@ int ZSTD_pthread_cond_init(ZSTD_pthread_cond_t* cond, pthread_condattr_t const* 
     return pthread_cond_init(*cond, attr);
 }
 
-int ZSTD_pthread_cond_destroy(ZSTD_pthread_cond_t* cond)
+int ZSTD144_pthread_cond_destroy(ZSTD144_pthread_cond_t* cond)
 {
     if (!*cond)
         return 0;

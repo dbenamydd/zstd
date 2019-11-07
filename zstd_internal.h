@@ -8,8 +8,8 @@
  * You may select, at your option, one of the above-listed licenses.
  */
 
-#ifndef ZSTD_CCOMMON_H_MODULE
-#define ZSTD_CCOMMON_H_MODULE
+#ifndef ZSTD144_CCOMMON_H_MODULE
+#define ZSTD144_CCOMMON_H_MODULE
 
 /* this module contains definitions which must be identical
  * across compression, decompression and dictBuilder.
@@ -23,26 +23,26 @@
 #include "mem.h"
 #include "debug.h"                 /* assert, DEBUGLOG, RAWLOG, g_debuglevel */
 #include "error_private.h"
-#define ZSTD_STATIC_LINKING_ONLY
+#define ZSTD144_STATIC_LINKING_ONLY
 #include "zstd.h"
-#define FSE_STATIC_LINKING_ONLY
+#define FSE144_STATIC_LINKING_ONLY
 #include "fse.h"
-#define HUF_STATIC_LINKING_ONLY
+#define HUF144_STATIC_LINKING_ONLY
 #include "huf.h"
-#ifndef XXH_STATIC_LINKING_ONLY
-#  define XXH_STATIC_LINKING_ONLY  /* XXH64_state_t */
+#ifndef XXH_32_STATIC_LINKING_ONLY
+#  define XXH_32_STATIC_LINKING_ONLY  /* XXH_3264_state_t */
 #endif
-#include "xxhash.h"                /* XXH_reset, update, digest */
+#include "xxhash.h"                /* XXH_32_reset, update, digest */
 
 #if defined (__cplusplus)
 extern "C" {
 #endif
 
 /* ---- static assert (debug) --- */
-#define ZSTD_STATIC_ASSERT(c) DEBUG_STATIC_ASSERT(c)
-#define ZSTD_isError ERR_isError   /* for inlining */
-#define FSE_isError  ERR_isError
-#define HUF_isError  ERR_isError
+#define ZSTD144_STATIC_ASSERT(c) DEBUG_STATIC_ASSERT(c)
+#define ZSTD144_isError ERR144_isError   /* for inlining */
+#define FSE144_isError  ERR144_isError
+#define HUF144_isError  ERR144_isError
 
 
 /*-*************************************
@@ -62,7 +62,7 @@ extern "C" {
  */
 #define RETURN_ERROR_IF(cond, err, ...) \
   if (cond) { \
-    RAWLOG(3, "%s:%d: ERROR!: check %s failed, returning %s", __FILE__, __LINE__, ZSTD_QUOTE(cond), ZSTD_QUOTE(ERROR(err))); \
+    RAWLOG(3, "%s:%d: ERROR!: check %s failed, returning %s", __FILE__, __LINE__, ZSTD144_QUOTE(cond), ZSTD144_QUOTE(ERROR(err))); \
     RAWLOG(3, ": " __VA_ARGS__); \
     RAWLOG(3, "\n"); \
     return ERROR(err); \
@@ -75,7 +75,7 @@ extern "C" {
  */
 #define RETURN_ERROR(err, ...) \
   do { \
-    RAWLOG(3, "%s:%d: ERROR!: unconditional check failed, returning %s", __FILE__, __LINE__, ZSTD_QUOTE(ERROR(err))); \
+    RAWLOG(3, "%s:%d: ERROR!: unconditional check failed, returning %s", __FILE__, __LINE__, ZSTD144_QUOTE(ERROR(err))); \
     RAWLOG(3, ": " __VA_ARGS__); \
     RAWLOG(3, "\n"); \
     return ERROR(err); \
@@ -89,8 +89,8 @@ extern "C" {
 #define FORWARD_IF_ERROR(err, ...) \
   do { \
     size_t const err_code = (err); \
-    if (ERR_isError(err_code)) { \
-      RAWLOG(3, "%s:%d: ERROR!: forwarding error in %s: %s", __FILE__, __LINE__, ZSTD_QUOTE(err), ERR_getErrorName(err_code)); \
+    if (ERR144_isError(err_code)) { \
+      RAWLOG(3, "%s:%d: ERROR!: forwarding error in %s: %s", __FILE__, __LINE__, ZSTD144_QUOTE(err), ERR144_getErrorName(err_code)); \
       RAWLOG(3, ": " __VA_ARGS__); \
       RAWLOG(3, "\n"); \
       return err_code; \
@@ -101,11 +101,11 @@ extern "C" {
 /*-*************************************
 *  Common constants
 ***************************************/
-#define ZSTD_OPT_NUM    (1<<12)
+#define ZSTD144_OPT_NUM    (1<<12)
 
-#define ZSTD_REP_NUM      3                 /* number of repcodes */
-#define ZSTD_REP_MOVE     (ZSTD_REP_NUM-1)
-static const U32 repStartValue[ZSTD_REP_NUM] = { 1, 4, 8 };
+#define ZSTD144_REP_NUM      3                 /* number of repcodes */
+#define ZSTD144_REP_MOVE     (ZSTD144_REP_NUM-1)
+static const U32 repStartValue[ZSTD144_REP_NUM] = { 1, 4, 8 };
 
 #define KB *(1 <<10)
 #define MB *(1 <<20)
@@ -118,14 +118,14 @@ static const U32 repStartValue[ZSTD_REP_NUM] = { 1, 4, 8 };
 #define BIT1   2
 #define BIT0   1
 
-#define ZSTD_WINDOWLOG_ABSOLUTEMIN 10
-static const size_t ZSTD_fcs_fieldSize[4] = { 0, 2, 4, 8 };
-static const size_t ZSTD_did_fieldSize[4] = { 0, 1, 2, 4 };
+#define ZSTD144_WINDOWLOG_ABSOLUTEMIN 10
+static const size_t ZSTD144_fcs_fieldSize[4] = { 0, 2, 4, 8 };
+static const size_t ZSTD144_did_fieldSize[4] = { 0, 1, 2, 4 };
 
-#define ZSTD_FRAMEIDSIZE 4   /* magic number size */
+#define ZSTD144_FRAMEIDSIZE 4   /* magic number size */
 
-#define ZSTD_BLOCKHEADERSIZE 3   /* C standard doesn't allow `static const` variable to be init using another `static const` variable */
-static const size_t ZSTD_blockHeaderSize = ZSTD_BLOCKHEADERSIZE;
+#define ZSTD144_BLOCKHEADERSIZE 3   /* C standard doesn't allow `static const` variable to be init using another `static const` variable */
+static const size_t ZSTD144_blockHeaderSize = ZSTD144_BLOCKHEADERSIZE;
 typedef enum { bt_raw, bt_rle, bt_compressed, bt_reserved } blockType_e;
 
 #define MIN_SEQUENCES_SIZE 1 /* nbSeq==0 */
@@ -150,80 +150,80 @@ typedef enum { set_basic, set_rle, set_compressed, set_repeat } symbolEncodingTy
 #define OffFSELog   8
 #define MaxFSELog  MAX(MAX(MLFSELog, LLFSELog), OffFSELog)
 
-static const U32 LL_bits[MaxLL+1] = { 0, 0, 0, 0, 0, 0, 0, 0,
+static const U32 LL144_bits[MaxLL+1] = { 0, 0, 0, 0, 0, 0, 0, 0,
                                       0, 0, 0, 0, 0, 0, 0, 0,
                                       1, 1, 1, 1, 2, 2, 3, 3,
                                       4, 6, 7, 8, 9,10,11,12,
                                      13,14,15,16 };
-static const S16 LL_defaultNorm[MaxLL+1] = { 4, 3, 2, 2, 2, 2, 2, 2,
+static const S16 LL144_defaultNorm[MaxLL+1] = { 4, 3, 2, 2, 2, 2, 2, 2,
                                              2, 2, 2, 2, 2, 1, 1, 1,
                                              2, 2, 2, 2, 2, 2, 2, 2,
                                              2, 3, 2, 1, 1, 1, 1, 1,
                                             -1,-1,-1,-1 };
-#define LL_DEFAULTNORMLOG 6  /* for static allocation */
-static const U32 LL_defaultNormLog = LL_DEFAULTNORMLOG;
+#define LL144_DEFAULTNORMLOG 6  /* for static allocation */
+static const U32 LL144_defaultNormLog = LL144_DEFAULTNORMLOG;
 
-static const U32 ML_bits[MaxML+1] = { 0, 0, 0, 0, 0, 0, 0, 0,
+static const U32 ML144_bits[MaxML+1] = { 0, 0, 0, 0, 0, 0, 0, 0,
                                       0, 0, 0, 0, 0, 0, 0, 0,
                                       0, 0, 0, 0, 0, 0, 0, 0,
                                       0, 0, 0, 0, 0, 0, 0, 0,
                                       1, 1, 1, 1, 2, 2, 3, 3,
                                       4, 4, 5, 7, 8, 9,10,11,
                                      12,13,14,15,16 };
-static const S16 ML_defaultNorm[MaxML+1] = { 1, 4, 3, 2, 2, 2, 2, 2,
+static const S16 ML144_defaultNorm[MaxML+1] = { 1, 4, 3, 2, 2, 2, 2, 2,
                                              2, 1, 1, 1, 1, 1, 1, 1,
                                              1, 1, 1, 1, 1, 1, 1, 1,
                                              1, 1, 1, 1, 1, 1, 1, 1,
                                              1, 1, 1, 1, 1, 1, 1, 1,
                                              1, 1, 1, 1, 1, 1,-1,-1,
                                             -1,-1,-1,-1,-1 };
-#define ML_DEFAULTNORMLOG 6  /* for static allocation */
-static const U32 ML_defaultNormLog = ML_DEFAULTNORMLOG;
+#define ML144_DEFAULTNORMLOG 6  /* for static allocation */
+static const U32 ML144_defaultNormLog = ML144_DEFAULTNORMLOG;
 
-static const S16 OF_defaultNorm[DefaultMaxOff+1] = { 1, 1, 1, 1, 1, 1, 2, 2,
+static const S16 OF144_defaultNorm[DefaultMaxOff+1] = { 1, 1, 1, 1, 1, 1, 2, 2,
                                                      2, 1, 1, 1, 1, 1, 1, 1,
                                                      1, 1, 1, 1, 1, 1, 1, 1,
                                                     -1,-1,-1,-1,-1 };
-#define OF_DEFAULTNORMLOG 5  /* for static allocation */
-static const U32 OF_defaultNormLog = OF_DEFAULTNORMLOG;
+#define OF144_DEFAULTNORMLOG 5  /* for static allocation */
+static const U32 OF144_defaultNormLog = OF144_DEFAULTNORMLOG;
 
 
 /*-*******************************************
 *  Shared functions to include for inlining
 *********************************************/
-static void ZSTD_copy8(void* dst, const void* src) { memcpy(dst, src, 8); }
+static void ZSTD144_copy8(void* dst, const void* src) { memcpy(dst, src, 8); }
 
-#define COPY8(d,s) { ZSTD_copy8(d,s); d+=8; s+=8; }
-static void ZSTD_copy16(void* dst, const void* src) { memcpy(dst, src, 16); }
-#define COPY16(d,s) { ZSTD_copy16(d,s); d+=16; s+=16; }
+#define COPY8(d,s) { ZSTD144_copy8(d,s); d+=8; s+=8; }
+static void ZSTD144_copy16(void* dst, const void* src) { memcpy(dst, src, 16); }
+#define COPY16(d,s) { ZSTD144_copy16(d,s); d+=16; s+=16; }
 
 #define WILDCOPY_OVERLENGTH 32
 #define WILDCOPY_VECLEN 16
 
 typedef enum {
-    ZSTD_no_overlap,
-    ZSTD_overlap_src_before_dst
-    /*  ZSTD_overlap_dst_before_src, */
-} ZSTD_overlap_e;
+    ZSTD144_no_overlap,
+    ZSTD144_overlap_src_before_dst
+    /*  ZSTD144_overlap_dst_before_src, */
+} ZSTD144_overlap_e;
 
-/*! ZSTD_wildcopy() :
+/*! ZSTD144_wildcopy() :
  *  Custom version of memcpy(), can over read/write up to WILDCOPY_OVERLENGTH bytes (if length==0)
  *  @param ovtype controls the overlap detection
- *         - ZSTD_no_overlap: The source and destination are guaranteed to be at least WILDCOPY_VECLEN bytes apart.
- *         - ZSTD_overlap_src_before_dst: The src and dst may overlap, but they MUST be at least 8 bytes apart.
+ *         - ZSTD144_no_overlap: The source and destination are guaranteed to be at least WILDCOPY_VECLEN bytes apart.
+ *         - ZSTD144_overlap_src_before_dst: The src and dst may overlap, but they MUST be at least 8 bytes apart.
  *           The src buffer must be before the dst buffer.
  */
 MEM_STATIC FORCE_INLINE_ATTR DONT_VECTORIZE
-void ZSTD_wildcopy(void* dst, const void* src, ptrdiff_t length, ZSTD_overlap_e const ovtype)
+void ZSTD144_wildcopy(void* dst, const void* src, ptrdiff_t length, ZSTD144_overlap_e const ovtype)
 {
     ptrdiff_t diff = (BYTE*)dst - (const BYTE*)src;
     const BYTE* ip = (const BYTE*)src;
     BYTE* op = (BYTE*)dst;
     BYTE* const oend = op + length;
 
-    assert(diff >= 8 || (ovtype == ZSTD_no_overlap && diff <= -WILDCOPY_VECLEN));
+    assert(diff >= 8 || (ovtype == ZSTD144_no_overlap && diff <= -WILDCOPY_VECLEN));
 
-    if (ovtype == ZSTD_overlap_src_before_dst && diff < WILDCOPY_VECLEN) {
+    if (ovtype == ZSTD144_overlap_src_before_dst && diff < WILDCOPY_VECLEN) {
         /* Handle short offset copies. */
         do {
             COPY8(op, ip)
@@ -273,25 +273,25 @@ typedef struct {
 
 /**
  * Contains the compressed frame size and an upper-bound for the decompressed frame size.
- * Note: before using `compressedSize`, check for errors using ZSTD_isError().
+ * Note: before using `compressedSize`, check for errors using ZSTD144_isError().
  *       similarly, before using `decompressedBound`, check for errors using:
- *          `decompressedBound != ZSTD_CONTENTSIZE_ERROR`
+ *          `decompressedBound != ZSTD144_CONTENTSIZE_ERROR`
  */
 typedef struct {
     size_t compressedSize;
     unsigned long long decompressedBound;
-} ZSTD_frameSizeInfo;   /* decompress & legacy */
+} ZSTD144_frameSizeInfo;   /* decompress & legacy */
 
-const seqStore_t* ZSTD_getSeqStore(const ZSTD_CCtx* ctx);   /* compress & dictBuilder */
-void ZSTD_seqToCodes(const seqStore_t* seqStorePtr);   /* compress, dictBuilder, decodeCorpus (shouldn't get its definition from here) */
+const seqStore_t* ZSTD144_getSeqStore(const ZSTD144_CCtx* ctx);   /* compress & dictBuilder */
+void ZSTD144_seqToCodes(const seqStore_t* seqStorePtr);   /* compress, dictBuilder, decodeCorpus (shouldn't get its definition from here) */
 
 /* custom memory allocation functions */
-void* ZSTD_malloc(size_t size, ZSTD_customMem customMem);
-void* ZSTD_calloc(size_t size, ZSTD_customMem customMem);
-void ZSTD_free(void* ptr, ZSTD_customMem customMem);
+void* ZSTD144_malloc(size_t size, ZSTD144_customMem customMem);
+void* ZSTD144_calloc(size_t size, ZSTD144_customMem customMem);
+void ZSTD144_free(void* ptr, ZSTD144_customMem customMem);
 
 
-MEM_STATIC U32 ZSTD_highbit32(U32 val)   /* compress, dictBuilder, decodeCorpus */
+MEM_STATIC U32 ZSTD144_highbit32(U32 val)   /* compress, dictBuilder, decodeCorpus */
 {
     assert(val != 0);
     {
@@ -317,11 +317,11 @@ MEM_STATIC U32 ZSTD_highbit32(U32 val)   /* compress, dictBuilder, decodeCorpus 
 }
 
 
-/* ZSTD_invalidateRepCodes() :
+/* ZSTD144_invalidateRepCodes() :
  * ensures next compression will not use repcodes from previous block.
  * Note : only works with regular variant;
  *        do not use with extDict variant ! */
-void ZSTD_invalidateRepCodes(ZSTD_CCtx* cctx);   /* zstdmt, adaptive_compression (shouldn't get this definition from here) */
+void ZSTD144_invalidateRepCodes(ZSTD144_CCtx* cctx);   /* zstdmt, adaptive_compression (shouldn't get this definition from here) */
 
 
 typedef struct {
@@ -330,16 +330,16 @@ typedef struct {
     U32 origSize;
 } blockProperties_t;   /* declared here for decompress and fullbench */
 
-/*! ZSTD_getcBlockSize() :
+/*! ZSTD144_getcBlockSize() :
  *  Provides the size of compressed block from block header `src` */
 /* Used by: decompress, fullbench (does not get its definition from here) */
-size_t ZSTD_getcBlockSize(const void* src, size_t srcSize,
+size_t ZSTD144_getcBlockSize(const void* src, size_t srcSize,
                           blockProperties_t* bpPtr);
 
-/*! ZSTD_decodeSeqHeaders() :
+/*! ZSTD144_decodeSeqHeaders() :
  *  decode sequence header from src */
 /* Used by: decompress, fullbench (does not get its definition from here) */
-size_t ZSTD_decodeSeqHeaders(ZSTD_DCtx* dctx, int* nbSeqPtr,
+size_t ZSTD144_decodeSeqHeaders(ZSTD144_DCtx* dctx, int* nbSeqPtr,
                        const void* src, size_t srcSize);
 
 
@@ -347,4 +347,4 @@ size_t ZSTD_decodeSeqHeaders(ZSTD_DCtx* dctx, int* nbSeqPtr,
 }
 #endif
 
-#endif   /* ZSTD_CCOMMON_H_MODULE */
+#endif   /* ZSTD144_CCOMMON_H_MODULE */

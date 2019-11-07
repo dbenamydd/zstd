@@ -22,45 +22,45 @@
 /*-****************************************
 *  Version
 ******************************************/
-unsigned ZSTD_versionNumber(void) { return ZSTD_VERSION_NUMBER; }
+unsigned ZSTD144_versionNumber(void) { return ZSTD144_VERSION_NUMBER; }
 
-const char* ZSTD_versionString(void) { return ZSTD_VERSION_STRING; }
+const char* ZSTD144_versionString(void) { return ZSTD144_VERSION_STRING; }
 
 
 /*-****************************************
 *  ZSTD Error Management
 ******************************************/
-#undef ZSTD_isError   /* defined within zstd_internal.h */
-/*! ZSTD_isError() :
+#undef ZSTD144_isError   /* defined within zstd_internal.h */
+/*! ZSTD144_isError() :
  *  tells if a return value is an error code
  *  symbol is required for external callers */
-unsigned ZSTD_isError(size_t code) { return ERR_isError(code); }
+unsigned ZSTD144_isError(size_t code) { return ERR144_isError(code); }
 
-/*! ZSTD_getErrorName() :
+/*! ZSTD144_getErrorName() :
  *  provides error code string from function result (useful for debugging) */
-const char* ZSTD_getErrorName(size_t code) { return ERR_getErrorName(code); }
+const char* ZSTD144_getErrorName(size_t code) { return ERR144_getErrorName(code); }
 
-/*! ZSTD_getError() :
- *  convert a `size_t` function result into a proper ZSTD_errorCode enum */
-ZSTD_ErrorCode ZSTD_getErrorCode(size_t code) { return ERR_getErrorCode(code); }
+/*! ZSTD144_getError() :
+ *  convert a `size_t` function result into a proper ZSTD144_errorCode enum */
+ZSTD144_ErrorCode ZSTD144_getErrorCode(size_t code) { return ERR144_getErrorCode(code); }
 
-/*! ZSTD_getErrorString() :
+/*! ZSTD144_getErrorString() :
  *  provides error code string from enum */
-const char* ZSTD_getErrorString(ZSTD_ErrorCode code) { return ERR_getErrorString(code); }
+const char* ZSTD144_getErrorString(ZSTD144_ErrorCode code) { return ERR144_getErrorString(code); }
 
 
 
 /*=**************************************************************
 *  Custom allocator
 ****************************************************************/
-void* ZSTD_malloc(size_t size, ZSTD_customMem customMem)
+void* ZSTD144_malloc(size_t size, ZSTD144_customMem customMem)
 {
     if (customMem.customAlloc)
         return customMem.customAlloc(customMem.opaque, size);
     return malloc(size);
 }
 
-void* ZSTD_calloc(size_t size, ZSTD_customMem customMem)
+void* ZSTD144_calloc(size_t size, ZSTD144_customMem customMem)
 {
     if (customMem.customAlloc) {
         /* calloc implemented as malloc+memset;
@@ -72,7 +72,7 @@ void* ZSTD_calloc(size_t size, ZSTD_customMem customMem)
     return calloc(1, size);
 }
 
-void ZSTD_free(void* ptr, ZSTD_customMem customMem)
+void ZSTD144_free(void* ptr, ZSTD144_customMem customMem)
 {
     if (ptr!=NULL) {
         if (customMem.customFree)

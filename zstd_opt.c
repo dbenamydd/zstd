@@ -13,11 +13,11 @@
 #include "zstd_opt.h"
 
 
-#define ZSTD_LITFREQ_ADD    2   /* scaling factor for litFreq, so that frequencies adapt faster to new stats */
-#define ZSTD_FREQ_DIV       4   /* log factor when using previous stats to init next stats */
-#define ZSTD_MAX_PRICE     (1<<30)
+#define ZSTD144_LITFREQ_ADD    2   /* scaling factor for litFreq, so that frequencies adapt faster to new stats */
+#define ZSTD144_FREQ_DIV       4   /* log factor when using previous stats to init next stats */
+#define ZSTD144_MAX_PRICE     (1<<30)
 
-#define ZSTD_PREDEF_THRESHOLD 1024   /* if srcSize < ZSTD_PREDEF_THRESHOLD, symbols' cost is assumed static, directly determined by pre-defined distributions */
+#define ZSTD144_PREDEF_THRESHOLD 1024   /* if srcSize < ZSTD144_PREDEF_THRESHOLD, symbols' cost is assumed static, directly determined by pre-defined distributions */
 
 
 /*-*************************************
@@ -27,26 +27,26 @@
 #if 0    /* approximation at bit level */
 #  define BITCOST_ACCURACY 0
 #  define BITCOST_MULTIPLIER (1 << BITCOST_ACCURACY)
-#  define WEIGHT(stat)  ((void)opt, ZSTD_bitWeight(stat))
+#  define WEIGHT(stat)  ((void)opt, ZSTD144_bitWeight(stat))
 #elif 0  /* fractional bit accuracy */
 #  define BITCOST_ACCURACY 8
 #  define BITCOST_MULTIPLIER (1 << BITCOST_ACCURACY)
-#  define WEIGHT(stat,opt) ((void)opt, ZSTD_fracWeight(stat))
+#  define WEIGHT(stat,opt) ((void)opt, ZSTD144_fracWeight(stat))
 #else    /* opt==approx, ultra==accurate */
 #  define BITCOST_ACCURACY 8
 #  define BITCOST_MULTIPLIER (1 << BITCOST_ACCURACY)
-#  define WEIGHT(stat,opt) (opt ? ZSTD_fracWeight(stat) : ZSTD_bitWeight(stat))
+#  define WEIGHT(stat,opt) (opt ? ZSTD144_fracWeight(stat) : ZSTD144_bitWeight(stat))
 #endif
 
-MEM_STATIC U32 ZSTD_bitWeight(U32 stat)
+MEM_STATIC U32 ZSTD144_bitWeight(U32 stat)
 {
-    return (ZSTD_highbit32(stat+1) * BITCOST_MULTIPLIER);
+    return (ZSTD144_highbit32(stat+1) * BITCOST_MULTIPLIER);
 }
 
-MEM_STATIC U32 ZSTD_fracWeight(U32 rawStat)
+MEM_STATIC U32 ZSTD144_fracWeight(U32 rawStat)
 {
     U32 const stat = rawStat + 1;
-    U32 const hb = ZSTD_highbit32(stat);
+    U32 const hb = ZSTD144_highbit32(stat);
     U32 const BWeight = hb * BITCOST_MULTIPLIER;
     U32 const FWeight = (stat << BITCOST_ACCURACY) >> hb;
     U32 const weight = BWeight + FWeight;
@@ -58,20 +58,20 @@ MEM_STATIC U32 ZSTD_fracWeight(U32 rawStat)
 /* debugging function,
  * @return price in bytes as fractional value
  * for debug messages only */
-MEM_STATIC double ZSTD_fCost(U32 price)
+MEM_STATIC double ZSTD144_fCost(U32 price)
 {
     return (double)price / (BITCOST_MULTIPLIER*8);
 }
 #endif
 
-static int ZSTD_compressedLiterals(optState_t const* const optPtr)
+static int ZSTD144_compressedLiterals(optState_t const* const optPtr)
 {
-    return optPtr->literalCompressionMode != ZSTD_lcm_uncompressed;
+    return optPtr->literalCompressionMode != ZSTD144_lcm_uncompressed;
 }
 
-static void ZSTD_setBasePrices(optState_t* optPtr, int optLevel)
+static void ZSTD144_setBasePrices(optState_t* optPtr, int optLevel)
 {
-    if (ZSTD_compressedLiterals(optPtr))
+    if (ZSTD144_compressedLiterals(optPtr))
         optPtr->litSumBasePrice = WEIGHT(optPtr->litSum, optLevel);
     optPtr->litLengthSumBasePrice = WEIGHT(optPtr->litLengthSum, optLevel);
     optPtr->matchLengthSumBasePrice = WEIGHT(optPtr->matchLengthSum, optLevel);
@@ -79,44 +79,44 @@ static void ZSTD_setBasePrices(optState_t* optPtr, int optLevel)
 }
 
 
-/* ZSTD_downscaleStat() :
- * reduce all elements in table by a factor 2^(ZSTD_FREQ_DIV+malus)
+/* ZSTD144_downscaleStat() :
+ * reduce all elements in table by a factor 2^(ZSTD144_FREQ_DIV+malus)
  * return the resulting sum of elements */
-static U32 ZSTD_downscaleStat(unsigned* table, U32 lastEltIndex, int malus)
+static U32 ZSTD144_downscaleStat(unsigned* table, U32 lastEltIndex, int malus)
 {
     U32 s, sum=0;
-    DEBUGLOG(5, "ZSTD_downscaleStat (nbElts=%u)", (unsigned)lastEltIndex+1);
-    assert(ZSTD_FREQ_DIV+malus > 0 && ZSTD_FREQ_DIV+malus < 31);
+    DEBUGLOG(5, "ZSTD144_downscaleStat (nbElts=%u)", (unsigned)lastEltIndex+1);
+    assert(ZSTD144_FREQ_DIV+malus > 0 && ZSTD144_FREQ_DIV+malus < 31);
     for (s=0; s<lastEltIndex+1; s++) {
-        table[s] = 1 + (table[s] >> (ZSTD_FREQ_DIV+malus));
+        table[s] = 1 + (table[s] >> (ZSTD144_FREQ_DIV+malus));
         sum += table[s];
     }
     return sum;
 }
 
-/* ZSTD_rescaleFreqs() :
+/* ZSTD144_rescaleFreqs() :
  * if first block (detected by optPtr->litLengthSum == 0) : init statistics
  *    take hints from dictionary if there is one
  *    or init from zero, using src for literals stats, or flat 1 for match symbols
  * otherwise downscale existing stats, to be used as seed for next block.
  */
 static void
-ZSTD_rescaleFreqs(optState_t* const optPtr,
+ZSTD144_rescaleFreqs(optState_t* const optPtr,
             const BYTE* const src, size_t const srcSize,
                   int const optLevel)
 {
-    int const compressedLiterals = ZSTD_compressedLiterals(optPtr);
-    DEBUGLOG(5, "ZSTD_rescaleFreqs (srcSize=%u)", (unsigned)srcSize);
+    int const compressedLiterals = ZSTD144_compressedLiterals(optPtr);
+    DEBUGLOG(5, "ZSTD144_rescaleFreqs (srcSize=%u)", (unsigned)srcSize);
     optPtr->priceType = zop_dynamic;
 
     if (optPtr->litLengthSum == 0) {  /* first block : init */
-        if (srcSize <= ZSTD_PREDEF_THRESHOLD) {  /* heuristic */
-            DEBUGLOG(5, "(srcSize <= ZSTD_PREDEF_THRESHOLD) => zop_predef");
+        if (srcSize <= ZSTD144_PREDEF_THRESHOLD) {  /* heuristic */
+            DEBUGLOG(5, "(srcSize <= ZSTD144_PREDEF_THRESHOLD) => zop_predef");
             optPtr->priceType = zop_predef;
         }
 
         assert(optPtr->symbolCosts != NULL);
-        if (optPtr->symbolCosts->huf.repeatMode == HUF_repeat_valid) {
+        if (optPtr->symbolCosts->huf.repeatMode == HUF144_repeat_valid) {
             /* huffman table presumed generated by dictionary */
             optPtr->priceType = zop_dynamic;
 
@@ -126,43 +126,43 @@ ZSTD_rescaleFreqs(optState_t* const optPtr,
                 optPtr->litSum = 0;
                 for (lit=0; lit<=MaxLit; lit++) {
                     U32 const scaleLog = 11;   /* scale to 2K */
-                    U32 const bitCost = HUF_getNbBits(optPtr->symbolCosts->huf.CTable, lit);
+                    U32 const bitCost = HUF144_getNbBits(optPtr->symbolCosts->huf.CTable, lit);
                     assert(bitCost <= scaleLog);
                     optPtr->litFreq[lit] = bitCost ? 1 << (scaleLog-bitCost) : 1 /*minimum to calculate cost*/;
                     optPtr->litSum += optPtr->litFreq[lit];
             }   }
 
             {   unsigned ll;
-                FSE_CState_t llstate;
-                FSE_initCState(&llstate, optPtr->symbolCosts->fse.litlengthCTable);
+                FSE144_CState_t llstate;
+                FSE144_initCState(&llstate, optPtr->symbolCosts->fse.litlengthCTable);
                 optPtr->litLengthSum = 0;
                 for (ll=0; ll<=MaxLL; ll++) {
                     U32 const scaleLog = 10;   /* scale to 1K */
-                    U32 const bitCost = FSE_getMaxNbBits(llstate.symbolTT, ll);
+                    U32 const bitCost = FSE144_getMaxNbBits(llstate.symbolTT, ll);
                     assert(bitCost < scaleLog);
                     optPtr->litLengthFreq[ll] = bitCost ? 1 << (scaleLog-bitCost) : 1 /*minimum to calculate cost*/;
                     optPtr->litLengthSum += optPtr->litLengthFreq[ll];
             }   }
 
             {   unsigned ml;
-                FSE_CState_t mlstate;
-                FSE_initCState(&mlstate, optPtr->symbolCosts->fse.matchlengthCTable);
+                FSE144_CState_t mlstate;
+                FSE144_initCState(&mlstate, optPtr->symbolCosts->fse.matchlengthCTable);
                 optPtr->matchLengthSum = 0;
                 for (ml=0; ml<=MaxML; ml++) {
                     U32 const scaleLog = 10;
-                    U32 const bitCost = FSE_getMaxNbBits(mlstate.symbolTT, ml);
+                    U32 const bitCost = FSE144_getMaxNbBits(mlstate.symbolTT, ml);
                     assert(bitCost < scaleLog);
                     optPtr->matchLengthFreq[ml] = bitCost ? 1 << (scaleLog-bitCost) : 1 /*minimum to calculate cost*/;
                     optPtr->matchLengthSum += optPtr->matchLengthFreq[ml];
             }   }
 
             {   unsigned of;
-                FSE_CState_t ofstate;
-                FSE_initCState(&ofstate, optPtr->symbolCosts->fse.offcodeCTable);
+                FSE144_CState_t ofstate;
+                FSE144_initCState(&ofstate, optPtr->symbolCosts->fse.offcodeCTable);
                 optPtr->offCodeSum = 0;
                 for (of=0; of<=MaxOff; of++) {
                     U32 const scaleLog = 10;
-                    U32 const bitCost = FSE_getMaxNbBits(ofstate.symbolTT, of);
+                    U32 const bitCost = FSE144_getMaxNbBits(ofstate.symbolTT, of);
                     assert(bitCost < scaleLog);
                     optPtr->offCodeFreq[of] = bitCost ? 1 << (scaleLog-bitCost) : 1 /*minimum to calculate cost*/;
                     optPtr->offCodeSum += optPtr->offCodeFreq[of];
@@ -173,8 +173,8 @@ ZSTD_rescaleFreqs(optState_t* const optPtr,
             assert(optPtr->litFreq != NULL);
             if (compressedLiterals) {
                 unsigned lit = MaxLit;
-                HIST_count_simple(optPtr->litFreq, &lit, src, srcSize);   /* use raw first block to init statistics */
-                optPtr->litSum = ZSTD_downscaleStat(optPtr->litFreq, MaxLit, 1);
+                HIST144_count_simple(optPtr->litFreq, &lit, src, srcSize);   /* use raw first block to init statistics */
+                optPtr->litSum = ZSTD144_downscaleStat(optPtr->litFreq, MaxLit, 1);
             }
 
             {   unsigned ll;
@@ -200,25 +200,25 @@ ZSTD_rescaleFreqs(optState_t* const optPtr,
     } else {   /* new block : re-use previous statistics, scaled down */
 
         if (compressedLiterals)
-            optPtr->litSum = ZSTD_downscaleStat(optPtr->litFreq, MaxLit, 1);
-        optPtr->litLengthSum = ZSTD_downscaleStat(optPtr->litLengthFreq, MaxLL, 0);
-        optPtr->matchLengthSum = ZSTD_downscaleStat(optPtr->matchLengthFreq, MaxML, 0);
-        optPtr->offCodeSum = ZSTD_downscaleStat(optPtr->offCodeFreq, MaxOff, 0);
+            optPtr->litSum = ZSTD144_downscaleStat(optPtr->litFreq, MaxLit, 1);
+        optPtr->litLengthSum = ZSTD144_downscaleStat(optPtr->litLengthFreq, MaxLL, 0);
+        optPtr->matchLengthSum = ZSTD144_downscaleStat(optPtr->matchLengthFreq, MaxML, 0);
+        optPtr->offCodeSum = ZSTD144_downscaleStat(optPtr->offCodeFreq, MaxOff, 0);
     }
 
-    ZSTD_setBasePrices(optPtr, optLevel);
+    ZSTD144_setBasePrices(optPtr, optLevel);
 }
 
-/* ZSTD_rawLiteralsCost() :
+/* ZSTD144_rawLiteralsCost() :
  * price of literals (only) in specified segment (which length can be 0).
  * does not include price of literalLength symbol */
-static U32 ZSTD_rawLiteralsCost(const BYTE* const literals, U32 const litLength,
+static U32 ZSTD144_rawLiteralsCost(const BYTE* const literals, U32 const litLength,
                                 const optState_t* const optPtr,
                                 int optLevel)
 {
     if (litLength == 0) return 0;
 
-    if (!ZSTD_compressedLiterals(optPtr))
+    if (!ZSTD144_compressedLiterals(optPtr))
         return (litLength << 3) * BITCOST_MULTIPLIER;  /* Uncompressed - 8 bytes per literal. */
 
     if (optPtr->priceType == zop_predef)
@@ -235,31 +235,31 @@ static U32 ZSTD_rawLiteralsCost(const BYTE* const literals, U32 const litLength,
     }
 }
 
-/* ZSTD_litLengthPrice() :
+/* ZSTD144_litLengthPrice() :
  * cost of literalLength symbol */
-static U32 ZSTD_litLengthPrice(U32 const litLength, const optState_t* const optPtr, int optLevel)
+static U32 ZSTD144_litLengthPrice(U32 const litLength, const optState_t* const optPtr, int optLevel)
 {
     if (optPtr->priceType == zop_predef) return WEIGHT(litLength, optLevel);
 
     /* dynamic statistics */
-    {   U32 const llCode = ZSTD_LLcode(litLength);
-        return (LL_bits[llCode] * BITCOST_MULTIPLIER)
+    {   U32 const llCode = ZSTD144_LLcode(litLength);
+        return (LL144_bits[llCode] * BITCOST_MULTIPLIER)
              + optPtr->litLengthSumBasePrice
              - WEIGHT(optPtr->litLengthFreq[llCode], optLevel);
     }
 }
 
-/* ZSTD_litLengthContribution() :
+/* ZSTD144_litLengthContribution() :
  * @return ( cost(litlength) - cost(0) )
  * this value can then be added to rawLiteralsCost()
  * to provide a cost which is directly comparable to a match ending at same position */
-static int ZSTD_litLengthContribution(U32 const litLength, const optState_t* const optPtr, int optLevel)
+static int ZSTD144_litLengthContribution(U32 const litLength, const optState_t* const optPtr, int optLevel)
 {
     if (optPtr->priceType >= zop_predef) return (int)WEIGHT(litLength, optLevel);
 
     /* dynamic statistics */
-    {   U32 const llCode = ZSTD_LLcode(litLength);
-        int const contribution = (int)(LL_bits[llCode] * BITCOST_MULTIPLIER)
+    {   U32 const llCode = ZSTD144_LLcode(litLength);
+        int const contribution = (int)(LL144_bits[llCode] * BITCOST_MULTIPLIER)
                                + (int)WEIGHT(optPtr->litLengthFreq[0], optLevel)   /* note: log2litLengthSum cancel out */
                                - (int)WEIGHT(optPtr->litLengthFreq[llCode], optLevel);
 #if 1
@@ -270,31 +270,31 @@ static int ZSTD_litLengthContribution(U32 const litLength, const optState_t* con
     }
 }
 
-/* ZSTD_literalsContribution() :
+/* ZSTD144_literalsContribution() :
  * creates a fake cost for the literals part of a sequence
  * which can be compared to the ending cost of a match
  * should a new match start at this position */
-static int ZSTD_literalsContribution(const BYTE* const literals, U32 const litLength,
+static int ZSTD144_literalsContribution(const BYTE* const literals, U32 const litLength,
                                      const optState_t* const optPtr,
                                      int optLevel)
 {
-    int const contribution = (int)ZSTD_rawLiteralsCost(literals, litLength, optPtr, optLevel)
-                           + ZSTD_litLengthContribution(litLength, optPtr, optLevel);
+    int const contribution = (int)ZSTD144_rawLiteralsCost(literals, litLength, optPtr, optLevel)
+                           + ZSTD144_litLengthContribution(litLength, optPtr, optLevel);
     return contribution;
 }
 
-/* ZSTD_getMatchPrice() :
+/* ZSTD144_getMatchPrice() :
  * Provides the cost of the match part (offset + matchLength) of a sequence
- * Must be combined with ZSTD_fullLiteralsCost() to get the full cost of a sequence.
+ * Must be combined with ZSTD144_fullLiteralsCost() to get the full cost of a sequence.
  * optLevel: when <2, favors small offset for decompression speed (improved cache efficiency) */
 FORCE_INLINE_TEMPLATE U32
-ZSTD_getMatchPrice(U32 const offset,
+ZSTD144_getMatchPrice(U32 const offset,
                    U32 const matchLength,
              const optState_t* const optPtr,
                    int const optLevel)
 {
     U32 price;
-    U32 const offCode = ZSTD_highbit32(offset+1);
+    U32 const offCode = ZSTD144_highbit32(offset+1);
     U32 const mlBase = matchLength - MINMATCH;
     assert(matchLength >= MINMATCH);
 
@@ -307,38 +307,38 @@ ZSTD_getMatchPrice(U32 const offset,
         price += (offCode-19)*2 * BITCOST_MULTIPLIER; /* handicap for long distance offsets, favor decompression speed */
 
     /* match Length */
-    {   U32 const mlCode = ZSTD_MLcode(mlBase);
-        price += (ML_bits[mlCode] * BITCOST_MULTIPLIER) + (optPtr->matchLengthSumBasePrice - WEIGHT(optPtr->matchLengthFreq[mlCode], optLevel));
+    {   U32 const mlCode = ZSTD144_MLcode(mlBase);
+        price += (ML144_bits[mlCode] * BITCOST_MULTIPLIER) + (optPtr->matchLengthSumBasePrice - WEIGHT(optPtr->matchLengthFreq[mlCode], optLevel));
     }
 
     price += BITCOST_MULTIPLIER / 5;   /* heuristic : make matches a bit more costly to favor less sequences -> faster decompression speed */
 
-    DEBUGLOG(8, "ZSTD_getMatchPrice(ml:%u) = %u", matchLength, price);
+    DEBUGLOG(8, "ZSTD144_getMatchPrice(ml:%u) = %u", matchLength, price);
     return price;
 }
 
-/* ZSTD_updateStats() :
+/* ZSTD144_updateStats() :
  * assumption : literals + litLengtn <= iend */
-static void ZSTD_updateStats(optState_t* const optPtr,
+static void ZSTD144_updateStats(optState_t* const optPtr,
                              U32 litLength, const BYTE* literals,
                              U32 offsetCode, U32 matchLength)
 {
     /* literals */
-    if (ZSTD_compressedLiterals(optPtr)) {
+    if (ZSTD144_compressedLiterals(optPtr)) {
         U32 u;
         for (u=0; u < litLength; u++)
-            optPtr->litFreq[literals[u]] += ZSTD_LITFREQ_ADD;
-        optPtr->litSum += litLength*ZSTD_LITFREQ_ADD;
+            optPtr->litFreq[literals[u]] += ZSTD144_LITFREQ_ADD;
+        optPtr->litSum += litLength*ZSTD144_LITFREQ_ADD;
     }
 
     /* literal Length */
-    {   U32 const llCode = ZSTD_LLcode(litLength);
+    {   U32 const llCode = ZSTD144_LLcode(litLength);
         optPtr->litLengthFreq[llCode]++;
         optPtr->litLengthSum++;
     }
 
     /* match offset code (0-2=>repCode; 3+=>offset+2) */
-    {   U32 const offCode = ZSTD_highbit32(offsetCode+1);
+    {   U32 const offCode = ZSTD144_highbit32(offsetCode+1);
         assert(offCode <= MaxOff);
         optPtr->offCodeFreq[offCode]++;
         optPtr->offCodeSum++;
@@ -346,17 +346,17 @@ static void ZSTD_updateStats(optState_t* const optPtr,
 
     /* match Length */
     {   U32 const mlBase = matchLength - MINMATCH;
-        U32 const mlCode = ZSTD_MLcode(mlBase);
+        U32 const mlCode = ZSTD144_MLcode(mlBase);
         optPtr->matchLengthFreq[mlCode]++;
         optPtr->matchLengthSum++;
     }
 }
 
 
-/* ZSTD_readMINMATCH() :
+/* ZSTD144_readMINMATCH() :
  * function safe only for comparisons
  * assumption : memPtr must be at least 4 bytes before end of buffer */
-MEM_STATIC U32 ZSTD_readMINMATCH(const void* memPtr, U32 length)
+MEM_STATIC U32 ZSTD144_readMINMATCH(const void* memPtr, U32 length)
 {
     switch (length)
     {
@@ -372,7 +372,7 @@ MEM_STATIC U32 ZSTD_readMINMATCH(const void* memPtr, U32 length)
 
 /* Update hashTable3 up to ip (excluded)
    Assumption : always within prefix (i.e. not within extDict) */
-static U32 ZSTD_insertAndFindFirstIndexHash3 (ZSTD_matchState_t* ms,
+static U32 ZSTD144_insertAndFindFirstIndexHash3 (ZSTD144_matchState_t* ms,
                                               U32* nextToUpdate3,
                                               const BYTE* const ip)
 {
@@ -381,11 +381,11 @@ static U32 ZSTD_insertAndFindFirstIndexHash3 (ZSTD_matchState_t* ms,
     const BYTE* const base = ms->window.base;
     U32 idx = *nextToUpdate3;
     U32 const target = (U32)(ip - base);
-    size_t const hash3 = ZSTD_hash3Ptr(ip, hashLog3);
+    size_t const hash3 = ZSTD144_hash3Ptr(ip, hashLog3);
     assert(hashLog3 > 0);
 
     while(idx < target) {
-        hashTable3[ZSTD_hash3Ptr(base+idx, hashLog3)] = idx;
+        hashTable3[ZSTD144_hash3Ptr(base+idx, hashLog3)] = idx;
         idx++;
     }
 
@@ -397,18 +397,18 @@ static U32 ZSTD_insertAndFindFirstIndexHash3 (ZSTD_matchState_t* ms,
 /*-*************************************
 *  Binary Tree search
 ***************************************/
-/** ZSTD_insertBt1() : add one or multiple positions to tree.
+/** ZSTD144_insertBt1() : add one or multiple positions to tree.
  *  ip : assumed <= iend-8 .
  * @return : nb of positions added */
-static U32 ZSTD_insertBt1(
-                ZSTD_matchState_t* ms,
+static U32 ZSTD144_insertBt1(
+                ZSTD144_matchState_t* ms,
                 const BYTE* const ip, const BYTE* const iend,
                 U32 const mls, const int extDict)
 {
-    const ZSTD_compressionParameters* const cParams = &ms->cParams;
+    const ZSTD144_compressionParameters* const cParams = &ms->cParams;
     U32*   const hashTable = ms->hashTable;
     U32    const hashLog = cParams->hashLog;
-    size_t const h  = ZSTD_hashPtr(ip, hashLog, mls);
+    size_t const h  = ZSTD144_hashPtr(ip, hashLog, mls);
     U32*   const bt = ms->chainTable;
     U32    const btLog  = cParams->chainLog - 1;
     U32    const btMask = (1 << btLog) - 1;
@@ -429,14 +429,14 @@ static U32 ZSTD_insertBt1(
     U32 matchEndIdx = current+8+1;
     size_t bestLength = 8;
     U32 nbCompares = 1U << cParams->searchLog;
-#ifdef ZSTD_C_PREDICT
+#ifdef ZSTD144_C_PREDICT
     U32 predictedSmall = *(bt + 2*((current-1)&btMask) + 0);
     U32 predictedLarge = *(bt + 2*((current-1)&btMask) + 1);
     predictedSmall += (predictedSmall>0);
     predictedLarge += (predictedLarge>0);
-#endif /* ZSTD_C_PREDICT */
+#endif /* ZSTD144_C_PREDICT */
 
-    DEBUGLOG(8, "ZSTD_insertBt1 (%u)", current);
+    DEBUGLOG(8, "ZSTD144_insertBt1 (%u)", current);
 
     assert(ip <= iend-8);   /* required for h calculation */
     hashTable[h] = current;   /* Update Hash Table */
@@ -447,7 +447,7 @@ static U32 ZSTD_insertBt1(
         size_t matchLength = MIN(commonLengthSmaller, commonLengthLarger);   /* guaranteed minimum nb of common bytes */
         assert(matchIndex < current);
 
-#ifdef ZSTD_C_PREDICT   /* note : can create issues when hlog small <= 11 */
+#ifdef ZSTD144_C_PREDICT   /* note : can create issues when hlog small <= 11 */
         const U32* predictPtr = bt + 2*((matchIndex-1) & btMask);   /* written this way, as bt is a roll buffer */
         if (matchIndex == predictedSmall) {
             /* no need to check length, result known */
@@ -471,10 +471,10 @@ static U32 ZSTD_insertBt1(
         if (!extDict || (matchIndex+matchLength >= dictLimit)) {
             assert(matchIndex+matchLength >= dictLimit);   /* might be wrong if actually extDict */
             match = base + matchIndex;
-            matchLength += ZSTD_count(ip+matchLength, match+matchLength, iend);
+            matchLength += ZSTD144_count(ip+matchLength, match+matchLength, iend);
         } else {
             match = dictBase + matchIndex;
-            matchLength += ZSTD_count_2segments(ip+matchLength, match+matchLength, iend, dictEnd, prefixStart);
+            matchLength += ZSTD144_count_2segments(ip+matchLength, match+matchLength, iend, dictEnd, prefixStart);
             if (matchIndex+matchLength >= dictLimit)
                 match = base + matchIndex;   /* to prepare for next usage of match[matchLength] */
         }
@@ -514,19 +514,19 @@ static U32 ZSTD_insertBt1(
 }
 
 FORCE_INLINE_TEMPLATE
-void ZSTD_updateTree_internal(
-                ZSTD_matchState_t* ms,
+void ZSTD144_updateTree_internal(
+                ZSTD144_matchState_t* ms,
                 const BYTE* const ip, const BYTE* const iend,
-                const U32 mls, const ZSTD_dictMode_e dictMode)
+                const U32 mls, const ZSTD144_dictMode_e dictMode)
 {
     const BYTE* const base = ms->window.base;
     U32 const target = (U32)(ip - base);
     U32 idx = ms->nextToUpdate;
-    DEBUGLOG(6, "ZSTD_updateTree_internal, from %u to %u  (dictMode:%u)",
+    DEBUGLOG(6, "ZSTD144_updateTree_internal, from %u to %u  (dictMode:%u)",
                 idx, target, dictMode);
 
     while(idx < target) {
-        U32 const forward = ZSTD_insertBt1(ms, base+idx, iend, mls, dictMode == ZSTD_extDict);
+        U32 const forward = ZSTD144_insertBt1(ms, base+idx, iend, mls, dictMode == ZSTD144_extDict);
         assert(idx < (U32)(idx + forward));
         idx += forward;
     }
@@ -535,29 +535,29 @@ void ZSTD_updateTree_internal(
     ms->nextToUpdate = target;
 }
 
-void ZSTD_updateTree(ZSTD_matchState_t* ms, const BYTE* ip, const BYTE* iend) {
-    ZSTD_updateTree_internal(ms, ip, iend, ms->cParams.minMatch, ZSTD_noDict);
+void ZSTD144_updateTree(ZSTD144_matchState_t* ms, const BYTE* ip, const BYTE* iend) {
+    ZSTD144_updateTree_internal(ms, ip, iend, ms->cParams.minMatch, ZSTD144_noDict);
 }
 
 FORCE_INLINE_TEMPLATE
-U32 ZSTD_insertBtAndGetAllMatches (
-                    ZSTD_match_t* matches,   /* store result (found matches) in this table (presumed large enough) */
-                    ZSTD_matchState_t* ms,
+U32 ZSTD144_insertBtAndGetAllMatches (
+                    ZSTD144_match_t* matches,   /* store result (found matches) in this table (presumed large enough) */
+                    ZSTD144_matchState_t* ms,
                     U32* nextToUpdate3,
-                    const BYTE* const ip, const BYTE* const iLimit, const ZSTD_dictMode_e dictMode,
-                    const U32 rep[ZSTD_REP_NUM],
+                    const BYTE* const ip, const BYTE* const iLimit, const ZSTD144_dictMode_e dictMode,
+                    const U32 rep[ZSTD144_REP_NUM],
                     U32 const ll0,   /* tells if associated literal length is 0 or not. This value must be 0 or 1 */
                     const U32 lengthToBeat,
                     U32 const mls /* template */)
 {
-    const ZSTD_compressionParameters* const cParams = &ms->cParams;
-    U32 const sufficient_len = MIN(cParams->targetLength, ZSTD_OPT_NUM -1);
+    const ZSTD144_compressionParameters* const cParams = &ms->cParams;
+    U32 const sufficient_len = MIN(cParams->targetLength, ZSTD144_OPT_NUM -1);
     const BYTE* const base = ms->window.base;
     U32 const current = (U32)(ip-base);
     U32 const hashLog = cParams->hashLog;
     U32 const minMatch = (mls==3) ? 3 : 4;
     U32* const hashTable = ms->hashTable;
-    size_t const h  = ZSTD_hashPtr(ip, hashLog, mls);
+    size_t const h  = ZSTD144_hashPtr(ip, hashLog, mls);
     U32 matchIndex  = hashTable[h];
     U32* const bt   = ms->chainTable;
     U32 const btLog = cParams->chainLog - 1;
@@ -568,7 +568,7 @@ U32 ZSTD_insertBtAndGetAllMatches (
     const BYTE* const dictEnd = dictBase + dictLimit;
     const BYTE* const prefixStart = base + dictLimit;
     U32 const btLow = (btMask >= current) ? 0 : current - btMask;
-    U32 const windowLow = ZSTD_getLowestMatchIndex(ms, current, cParams->windowLog);
+    U32 const windowLow = ZSTD144_getLowestMatchIndex(ms, current, cParams->windowLog);
     U32 const matchLow = windowLow ? windowLow : 1;
     U32* smallerPtr = bt + 2*(current&btMask);
     U32* largerPtr  = bt + 2*(current&btMask) + 1;
@@ -577,51 +577,51 @@ U32 ZSTD_insertBtAndGetAllMatches (
     U32 mnum = 0;
     U32 nbCompares = 1U << cParams->searchLog;
 
-    const ZSTD_matchState_t* dms    = dictMode == ZSTD_dictMatchState ? ms->dictMatchState : NULL;
-    const ZSTD_compressionParameters* const dmsCParams =
-                                      dictMode == ZSTD_dictMatchState ? &dms->cParams : NULL;
-    const BYTE* const dmsBase       = dictMode == ZSTD_dictMatchState ? dms->window.base : NULL;
-    const BYTE* const dmsEnd        = dictMode == ZSTD_dictMatchState ? dms->window.nextSrc : NULL;
-    U32         const dmsHighLimit  = dictMode == ZSTD_dictMatchState ? (U32)(dmsEnd - dmsBase) : 0;
-    U32         const dmsLowLimit   = dictMode == ZSTD_dictMatchState ? dms->window.lowLimit : 0;
-    U32         const dmsIndexDelta = dictMode == ZSTD_dictMatchState ? windowLow - dmsHighLimit : 0;
-    U32         const dmsHashLog    = dictMode == ZSTD_dictMatchState ? dmsCParams->hashLog : hashLog;
-    U32         const dmsBtLog      = dictMode == ZSTD_dictMatchState ? dmsCParams->chainLog - 1 : btLog;
-    U32         const dmsBtMask     = dictMode == ZSTD_dictMatchState ? (1U << dmsBtLog) - 1 : 0;
-    U32         const dmsBtLow      = dictMode == ZSTD_dictMatchState && dmsBtMask < dmsHighLimit - dmsLowLimit ? dmsHighLimit - dmsBtMask : dmsLowLimit;
+    const ZSTD144_matchState_t* dms    = dictMode == ZSTD144_dictMatchState ? ms->dictMatchState : NULL;
+    const ZSTD144_compressionParameters* const dmsCParams =
+                                      dictMode == ZSTD144_dictMatchState ? &dms->cParams : NULL;
+    const BYTE* const dmsBase       = dictMode == ZSTD144_dictMatchState ? dms->window.base : NULL;
+    const BYTE* const dmsEnd        = dictMode == ZSTD144_dictMatchState ? dms->window.nextSrc : NULL;
+    U32         const dmsHighLimit  = dictMode == ZSTD144_dictMatchState ? (U32)(dmsEnd - dmsBase) : 0;
+    U32         const dmsLowLimit   = dictMode == ZSTD144_dictMatchState ? dms->window.lowLimit : 0;
+    U32         const dmsIndexDelta = dictMode == ZSTD144_dictMatchState ? windowLow - dmsHighLimit : 0;
+    U32         const dmsHashLog    = dictMode == ZSTD144_dictMatchState ? dmsCParams->hashLog : hashLog;
+    U32         const dmsBtLog      = dictMode == ZSTD144_dictMatchState ? dmsCParams->chainLog - 1 : btLog;
+    U32         const dmsBtMask     = dictMode == ZSTD144_dictMatchState ? (1U << dmsBtLog) - 1 : 0;
+    U32         const dmsBtLow      = dictMode == ZSTD144_dictMatchState && dmsBtMask < dmsHighLimit - dmsLowLimit ? dmsHighLimit - dmsBtMask : dmsLowLimit;
 
     size_t bestLength = lengthToBeat-1;
-    DEBUGLOG(8, "ZSTD_insertBtAndGetAllMatches: current=%u", current);
+    DEBUGLOG(8, "ZSTD144_insertBtAndGetAllMatches: current=%u", current);
 
     /* check repCode */
     assert(ll0 <= 1);   /* necessarily 1 or 0 */
-    {   U32 const lastR = ZSTD_REP_NUM + ll0;
+    {   U32 const lastR = ZSTD144_REP_NUM + ll0;
         U32 repCode;
         for (repCode = ll0; repCode < lastR; repCode++) {
-            U32 const repOffset = (repCode==ZSTD_REP_NUM) ? (rep[0] - 1) : rep[repCode];
+            U32 const repOffset = (repCode==ZSTD144_REP_NUM) ? (rep[0] - 1) : rep[repCode];
             U32 const repIndex = current - repOffset;
             U32 repLen = 0;
             assert(current >= dictLimit);
             if (repOffset-1 /* intentional overflow, discards 0 and -1 */ < current-dictLimit) {  /* equivalent to `current > repIndex >= dictLimit` */
-                if (ZSTD_readMINMATCH(ip, minMatch) == ZSTD_readMINMATCH(ip - repOffset, minMatch)) {
-                    repLen = (U32)ZSTD_count(ip+minMatch, ip+minMatch-repOffset, iLimit) + minMatch;
+                if (ZSTD144_readMINMATCH(ip, minMatch) == ZSTD144_readMINMATCH(ip - repOffset, minMatch)) {
+                    repLen = (U32)ZSTD144_count(ip+minMatch, ip+minMatch-repOffset, iLimit) + minMatch;
                 }
             } else {  /* repIndex < dictLimit || repIndex >= current */
-                const BYTE* const repMatch = dictMode == ZSTD_dictMatchState ?
+                const BYTE* const repMatch = dictMode == ZSTD144_dictMatchState ?
                                              dmsBase + repIndex - dmsIndexDelta :
                                              dictBase + repIndex;
                 assert(current >= windowLow);
-                if ( dictMode == ZSTD_extDict
+                if ( dictMode == ZSTD144_extDict
                   && ( ((repOffset-1) /*intentional overflow*/ < current - windowLow)  /* equivalent to `current > repIndex >= windowLow` */
                      & (((U32)((dictLimit-1) - repIndex) >= 3) ) /* intentional overflow : do not test positions overlapping 2 memory segments */)
-                  && (ZSTD_readMINMATCH(ip, minMatch) == ZSTD_readMINMATCH(repMatch, minMatch)) ) {
-                    repLen = (U32)ZSTD_count_2segments(ip+minMatch, repMatch+minMatch, iLimit, dictEnd, prefixStart) + minMatch;
+                  && (ZSTD144_readMINMATCH(ip, minMatch) == ZSTD144_readMINMATCH(repMatch, minMatch)) ) {
+                    repLen = (U32)ZSTD144_count_2segments(ip+minMatch, repMatch+minMatch, iLimit, dictEnd, prefixStart) + minMatch;
                 }
-                if (dictMode == ZSTD_dictMatchState
+                if (dictMode == ZSTD144_dictMatchState
                   && ( ((repOffset-1) /*intentional overflow*/ < current - (dmsLowLimit + dmsIndexDelta))  /* equivalent to `current > repIndex >= dmsLowLimit` */
                      & ((U32)((dictLimit-1) - repIndex) >= 3) ) /* intentional overflow : do not test positions overlapping 2 memory segments */
-                  && (ZSTD_readMINMATCH(ip, minMatch) == ZSTD_readMINMATCH(repMatch, minMatch)) ) {
-                    repLen = (U32)ZSTD_count_2segments(ip+minMatch, repMatch+minMatch, iLimit, dmsEnd, prefixStart) + minMatch;
+                  && (ZSTD144_readMINMATCH(ip, minMatch) == ZSTD144_readMINMATCH(repMatch, minMatch)) ) {
+                    repLen = (U32)ZSTD144_count_2segments(ip+minMatch, repMatch+minMatch, iLimit, dmsEnd, prefixStart) + minMatch;
             }   }
             /* save longer solution */
             if (repLen > bestLength) {
@@ -638,16 +638,16 @@ U32 ZSTD_insertBtAndGetAllMatches (
 
     /* HC3 match finder */
     if ((mls == 3) /*static*/ && (bestLength < mls)) {
-        U32 const matchIndex3 = ZSTD_insertAndFindFirstIndexHash3(ms, nextToUpdate3, ip);
+        U32 const matchIndex3 = ZSTD144_insertAndFindFirstIndexHash3(ms, nextToUpdate3, ip);
         if ((matchIndex3 >= matchLow)
           & (current - matchIndex3 < (1<<18)) /*heuristic : longer distance likely too expensive*/ ) {
             size_t mlen;
-            if ((dictMode == ZSTD_noDict) /*static*/ || (dictMode == ZSTD_dictMatchState) /*static*/ || (matchIndex3 >= dictLimit)) {
+            if ((dictMode == ZSTD144_noDict) /*static*/ || (dictMode == ZSTD144_dictMatchState) /*static*/ || (matchIndex3 >= dictLimit)) {
                 const BYTE* const match = base + matchIndex3;
-                mlen = ZSTD_count(ip, match, iLimit);
+                mlen = ZSTD144_count(ip, match, iLimit);
             } else {
                 const BYTE* const match = dictBase + matchIndex3;
-                mlen = ZSTD_count_2segments(ip, match, iLimit, dictEnd, prefixStart);
+                mlen = ZSTD144_count_2segments(ip, match, iLimit, dictEnd, prefixStart);
             }
 
             /* save best solution */
@@ -657,7 +657,7 @@ U32 ZSTD_insertBtAndGetAllMatches (
                 bestLength = mlen;
                 assert(current > matchIndex3);
                 assert(mnum==0);  /* no prior solution */
-                matches[0].off = (current - matchIndex3) + ZSTD_REP_MOVE;
+                matches[0].off = (current - matchIndex3) + ZSTD144_REP_MOVE;
                 matches[0].len = (U32)mlen;
                 mnum = 1;
                 if ( (mlen > sufficient_len) |
@@ -676,32 +676,32 @@ U32 ZSTD_insertBtAndGetAllMatches (
         size_t matchLength = MIN(commonLengthSmaller, commonLengthLarger);   /* guaranteed minimum nb of common bytes */
         assert(current > matchIndex);
 
-        if ((dictMode == ZSTD_noDict) || (dictMode == ZSTD_dictMatchState) || (matchIndex+matchLength >= dictLimit)) {
+        if ((dictMode == ZSTD144_noDict) || (dictMode == ZSTD144_dictMatchState) || (matchIndex+matchLength >= dictLimit)) {
             assert(matchIndex+matchLength >= dictLimit);  /* ensure the condition is correct when !extDict */
             match = base + matchIndex;
             if (matchIndex >= dictLimit) assert(memcmp(match, ip, matchLength) == 0);  /* ensure early section of match is equal as expected */
-            matchLength += ZSTD_count(ip+matchLength, match+matchLength, iLimit);
+            matchLength += ZSTD144_count(ip+matchLength, match+matchLength, iLimit);
         } else {
             match = dictBase + matchIndex;
             assert(memcmp(match, ip, matchLength) == 0);  /* ensure early section of match is equal as expected */
-            matchLength += ZSTD_count_2segments(ip+matchLength, match+matchLength, iLimit, dictEnd, prefixStart);
+            matchLength += ZSTD144_count_2segments(ip+matchLength, match+matchLength, iLimit, dictEnd, prefixStart);
             if (matchIndex+matchLength >= dictLimit)
                 match = base + matchIndex;   /* prepare for match[matchLength] read */
         }
 
         if (matchLength > bestLength) {
             DEBUGLOG(8, "found match of length %u at distance %u (offCode=%u)",
-                    (U32)matchLength, current - matchIndex, current - matchIndex + ZSTD_REP_MOVE);
+                    (U32)matchLength, current - matchIndex, current - matchIndex + ZSTD144_REP_MOVE);
             assert(matchEndIdx > matchIndex);
             if (matchLength > matchEndIdx - matchIndex)
                 matchEndIdx = matchIndex + (U32)matchLength;
             bestLength = matchLength;
-            matches[mnum].off = (current - matchIndex) + ZSTD_REP_MOVE;
+            matches[mnum].off = (current - matchIndex) + ZSTD144_REP_MOVE;
             matches[mnum].len = (U32)matchLength;
             mnum++;
-            if ( (matchLength > ZSTD_OPT_NUM)
+            if ( (matchLength > ZSTD144_OPT_NUM)
                | (ip+matchLength == iLimit) /* equal : no way to know if inf or sup */) {
-                if (dictMode == ZSTD_dictMatchState) nbCompares = 0; /* break should also skip searching dms */
+                if (dictMode == ZSTD144_dictMatchState) nbCompares = 0; /* break should also skip searching dms */
                 break; /* drop, to preserve bt consistency (miss a little bit of compression) */
             }
         }
@@ -723,8 +723,8 @@ U32 ZSTD_insertBtAndGetAllMatches (
 
     *smallerPtr = *largerPtr = 0;
 
-    if (dictMode == ZSTD_dictMatchState && nbCompares) {
-        size_t const dmsH = ZSTD_hashPtr(ip, dmsHashLog, mls);
+    if (dictMode == ZSTD144_dictMatchState && nbCompares) {
+        size_t const dmsH = ZSTD144_hashPtr(ip, dmsHashLog, mls);
         U32 dictMatchIndex = dms->hashTable[dmsH];
         const U32* const dmsBt = dms->chainTable;
         commonLengthSmaller = commonLengthLarger = 0;
@@ -732,21 +732,21 @@ U32 ZSTD_insertBtAndGetAllMatches (
             const U32* const nextPtr = dmsBt + 2*(dictMatchIndex & dmsBtMask);
             size_t matchLength = MIN(commonLengthSmaller, commonLengthLarger);   /* guaranteed minimum nb of common bytes */
             const BYTE* match = dmsBase + dictMatchIndex;
-            matchLength += ZSTD_count_2segments(ip+matchLength, match+matchLength, iLimit, dmsEnd, prefixStart);
+            matchLength += ZSTD144_count_2segments(ip+matchLength, match+matchLength, iLimit, dmsEnd, prefixStart);
             if (dictMatchIndex+matchLength >= dmsHighLimit)
                 match = base + dictMatchIndex + dmsIndexDelta;   /* to prepare for next usage of match[matchLength] */
 
             if (matchLength > bestLength) {
                 matchIndex = dictMatchIndex + dmsIndexDelta;
                 DEBUGLOG(8, "found dms match of length %u at distance %u (offCode=%u)",
-                        (U32)matchLength, current - matchIndex, current - matchIndex + ZSTD_REP_MOVE);
+                        (U32)matchLength, current - matchIndex, current - matchIndex + ZSTD144_REP_MOVE);
                 if (matchLength > matchEndIdx - matchIndex)
                     matchEndIdx = matchIndex + (U32)matchLength;
                 bestLength = matchLength;
-                matches[mnum].off = (current - matchIndex) + ZSTD_REP_MOVE;
+                matches[mnum].off = (current - matchIndex) + ZSTD144_REP_MOVE;
                 matches[mnum].len = (U32)matchLength;
                 mnum++;
-                if ( (matchLength > ZSTD_OPT_NUM)
+                if ( (matchLength > ZSTD144_OPT_NUM)
                    | (ip+matchLength == iLimit) /* equal : no way to know if inf or sup */) {
                     break;   /* drop, to guarantee consistency (miss a little bit of compression) */
                 }
@@ -770,28 +770,28 @@ U32 ZSTD_insertBtAndGetAllMatches (
 }
 
 
-FORCE_INLINE_TEMPLATE U32 ZSTD_BtGetAllMatches (
-                        ZSTD_match_t* matches,   /* store result (match found, increasing size) in this table */
-                        ZSTD_matchState_t* ms,
+FORCE_INLINE_TEMPLATE U32 ZSTD144_BtGetAllMatches (
+                        ZSTD144_match_t* matches,   /* store result (match found, increasing size) in this table */
+                        ZSTD144_matchState_t* ms,
                         U32* nextToUpdate3,
-                        const BYTE* ip, const BYTE* const iHighLimit, const ZSTD_dictMode_e dictMode,
-                        const U32 rep[ZSTD_REP_NUM],
+                        const BYTE* ip, const BYTE* const iHighLimit, const ZSTD144_dictMode_e dictMode,
+                        const U32 rep[ZSTD144_REP_NUM],
                         U32 const ll0,
                         U32 const lengthToBeat)
 {
-    const ZSTD_compressionParameters* const cParams = &ms->cParams;
+    const ZSTD144_compressionParameters* const cParams = &ms->cParams;
     U32 const matchLengthSearch = cParams->minMatch;
-    DEBUGLOG(8, "ZSTD_BtGetAllMatches");
+    DEBUGLOG(8, "ZSTD144_BtGetAllMatches");
     if (ip < ms->window.base + ms->nextToUpdate) return 0;   /* skipped area */
-    ZSTD_updateTree_internal(ms, ip, iHighLimit, matchLengthSearch, dictMode);
+    ZSTD144_updateTree_internal(ms, ip, iHighLimit, matchLengthSearch, dictMode);
     switch(matchLengthSearch)
     {
-    case 3 : return ZSTD_insertBtAndGetAllMatches(matches, ms, nextToUpdate3, ip, iHighLimit, dictMode, rep, ll0, lengthToBeat, 3);
+    case 3 : return ZSTD144_insertBtAndGetAllMatches(matches, ms, nextToUpdate3, ip, iHighLimit, dictMode, rep, ll0, lengthToBeat, 3);
     default :
-    case 4 : return ZSTD_insertBtAndGetAllMatches(matches, ms, nextToUpdate3, ip, iHighLimit, dictMode, rep, ll0, lengthToBeat, 4);
-    case 5 : return ZSTD_insertBtAndGetAllMatches(matches, ms, nextToUpdate3, ip, iHighLimit, dictMode, rep, ll0, lengthToBeat, 5);
+    case 4 : return ZSTD144_insertBtAndGetAllMatches(matches, ms, nextToUpdate3, ip, iHighLimit, dictMode, rep, ll0, lengthToBeat, 4);
+    case 5 : return ZSTD144_insertBtAndGetAllMatches(matches, ms, nextToUpdate3, ip, iHighLimit, dictMode, rep, ll0, lengthToBeat, 5);
     case 7 :
-    case 6 : return ZSTD_insertBtAndGetAllMatches(matches, ms, nextToUpdate3, ip, iHighLimit, dictMode, rep, ll0, lengthToBeat, 6);
+    case 6 : return ZSTD144_insertBtAndGetAllMatches(matches, ms, nextToUpdate3, ip, iHighLimit, dictMode, rep, ll0, lengthToBeat, 6);
     }
 }
 
@@ -803,17 +803,17 @@ typedef struct repcodes_s {
     U32 rep[3];
 } repcodes_t;
 
-static repcodes_t ZSTD_updateRep(U32 const rep[3], U32 const offset, U32 const ll0)
+static repcodes_t ZSTD144_updateRep(U32 const rep[3], U32 const offset, U32 const ll0)
 {
     repcodes_t newReps;
-    if (offset >= ZSTD_REP_NUM) {  /* full offset */
+    if (offset >= ZSTD144_REP_NUM) {  /* full offset */
         newReps.rep[2] = rep[1];
         newReps.rep[1] = rep[0];
-        newReps.rep[0] = offset - ZSTD_REP_MOVE;
+        newReps.rep[0] = offset - ZSTD144_REP_MOVE;
     } else {   /* repcode */
         U32 const repCode = offset + ll0;
         if (repCode > 0) {  /* note : if repCode==0, no change */
-            U32 const currentOffset = (repCode==ZSTD_REP_NUM) ? (rep[0] - 1) : rep[repCode];
+            U32 const currentOffset = (repCode==ZSTD144_REP_NUM) ? (rep[0] - 1) : rep[repCode];
             newReps.rep[2] = (repCode >= 2) ? rep[1] : rep[2];
             newReps.rep[1] = rep[0];
             newReps.rep[0] = currentOffset;
@@ -825,7 +825,7 @@ static repcodes_t ZSTD_updateRep(U32 const rep[3], U32 const offset, U32 const l
 }
 
 
-static U32 ZSTD_totalLen(ZSTD_optimal_t sol)
+static U32 ZSTD144_totalLen(ZSTD144_optimal_t sol)
 {
     return sol.litlen + sol.mlen;
 }
@@ -848,12 +848,12 @@ listStats(const U32* table, int lastEltID)
 #endif
 
 FORCE_INLINE_TEMPLATE size_t
-ZSTD_compressBlock_opt_generic(ZSTD_matchState_t* ms,
+ZSTD144_compressBlock_opt_generic(ZSTD144_matchState_t* ms,
                                seqStore_t* seqStore,
-                               U32 rep[ZSTD_REP_NUM],
+                               U32 rep[ZSTD144_REP_NUM],
                          const void* src, size_t srcSize,
                          const int optLevel,
-                         const ZSTD_dictMode_e dictMode)
+                         const ZSTD144_dictMode_e dictMode)
 {
     optState_t* const optStatePtr = &ms->opt;
     const BYTE* const istart = (const BYTE*)src;
@@ -863,21 +863,21 @@ ZSTD_compressBlock_opt_generic(ZSTD_matchState_t* ms,
     const BYTE* const ilimit = iend - 8;
     const BYTE* const base = ms->window.base;
     const BYTE* const prefixStart = base + ms->window.dictLimit;
-    const ZSTD_compressionParameters* const cParams = &ms->cParams;
+    const ZSTD144_compressionParameters* const cParams = &ms->cParams;
 
-    U32 const sufficient_len = MIN(cParams->targetLength, ZSTD_OPT_NUM -1);
+    U32 const sufficient_len = MIN(cParams->targetLength, ZSTD144_OPT_NUM -1);
     U32 const minMatch = (cParams->minMatch == 3) ? 3 : 4;
     U32 nextToUpdate3 = ms->nextToUpdate;
 
-    ZSTD_optimal_t* const opt = optStatePtr->priceTable;
-    ZSTD_match_t* const matches = optStatePtr->matchTable;
-    ZSTD_optimal_t lastSequence;
+    ZSTD144_optimal_t* const opt = optStatePtr->priceTable;
+    ZSTD144_match_t* const matches = optStatePtr->matchTable;
+    ZSTD144_optimal_t lastSequence;
 
     /* init */
-    DEBUGLOG(5, "ZSTD_compressBlock_opt_generic: current=%u, prefix=%u, nextToUpdate=%u",
+    DEBUGLOG(5, "ZSTD144_compressBlock_opt_generic: current=%u, prefix=%u, nextToUpdate=%u",
                 (U32)(ip - base), ms->window.dictLimit, ms->nextToUpdate);
     assert(optLevel <= 2);
-    ZSTD_rescaleFreqs(optStatePtr, (const BYTE*)src, srcSize, optLevel);
+    ZSTD144_rescaleFreqs(optStatePtr, (const BYTE*)src, srcSize, optLevel);
     ip += (ip==prefixStart);
 
     /* Match Loop */
@@ -887,14 +887,14 @@ ZSTD_compressBlock_opt_generic(ZSTD_matchState_t* ms,
         /* find first match */
         {   U32 const litlen = (U32)(ip - anchor);
             U32 const ll0 = !litlen;
-            U32 const nbMatches = ZSTD_BtGetAllMatches(matches, ms, &nextToUpdate3, ip, iend, dictMode, rep, ll0, minMatch);
+            U32 const nbMatches = ZSTD144_BtGetAllMatches(matches, ms, &nextToUpdate3, ip, iend, dictMode, rep, ll0, minMatch);
             if (!nbMatches) { ip++; continue; }
 
             /* initialize opt[0] */
-            { U32 i ; for (i=0; i<ZSTD_REP_NUM; i++) opt[0].rep[i] = rep[i]; }
+            { U32 i ; for (i=0; i<ZSTD144_REP_NUM; i++) opt[0].rep[i] = rep[i]; }
             opt[0].mlen = 0;  /* means is_a_literal */
             opt[0].litlen = litlen;
-            opt[0].price = ZSTD_literalsContribution(anchor, litlen, optStatePtr, optLevel);
+            opt[0].price = ZSTD144_literalsContribution(anchor, litlen, optStatePtr, optLevel);
 
             /* large match -> immediate encoding */
             {   U32 const maxML = matches[nbMatches-1].len;
@@ -909,31 +909,31 @@ ZSTD_compressBlock_opt_generic(ZSTD_matchState_t* ms,
                     DEBUGLOG(6, "large match (%u>%u), immediate encoding",
                                 maxML, sufficient_len);
                     cur = 0;
-                    last_pos = ZSTD_totalLen(lastSequence);
+                    last_pos = ZSTD144_totalLen(lastSequence);
                     goto _shortestPath;
             }   }
 
             /* set prices for first matches starting position == 0 */
-            {   U32 const literalsPrice = opt[0].price + ZSTD_litLengthPrice(0, optStatePtr, optLevel);
+            {   U32 const literalsPrice = opt[0].price + ZSTD144_litLengthPrice(0, optStatePtr, optLevel);
                 U32 pos;
                 U32 matchNb;
                 for (pos = 1; pos < minMatch; pos++) {
-                    opt[pos].price = ZSTD_MAX_PRICE;   /* mlen, litlen and price will be fixed during forward scanning */
+                    opt[pos].price = ZSTD144_MAX_PRICE;   /* mlen, litlen and price will be fixed during forward scanning */
                 }
                 for (matchNb = 0; matchNb < nbMatches; matchNb++) {
                     U32 const offset = matches[matchNb].off;
                     U32 const end = matches[matchNb].len;
-                    repcodes_t const repHistory = ZSTD_updateRep(rep, offset, ll0);
+                    repcodes_t const repHistory = ZSTD144_updateRep(rep, offset, ll0);
                     for ( ; pos <= end ; pos++ ) {
-                        U32 const matchPrice = ZSTD_getMatchPrice(offset, pos, optStatePtr, optLevel);
+                        U32 const matchPrice = ZSTD144_getMatchPrice(offset, pos, optStatePtr, optLevel);
                         U32 const sequencePrice = literalsPrice + matchPrice;
                         DEBUGLOG(7, "rPos:%u => set initial price : %.2f",
-                                    pos, ZSTD_fCost(sequencePrice));
+                                    pos, ZSTD144_fCost(sequencePrice));
                         opt[pos].mlen = pos;
                         opt[pos].off = offset;
                         opt[pos].litlen = litlen;
                         opt[pos].price = sequencePrice;
-                        ZSTD_STATIC_ASSERT(sizeof(opt[pos].rep) == sizeof(repHistory));
+                        ZSTD144_STATIC_ASSERT(sizeof(opt[pos].rep) == sizeof(repHistory));
                         memcpy(opt[pos].rep, &repHistory, sizeof(repHistory));
                 }   }
                 last_pos = pos-1;
@@ -943,19 +943,19 @@ ZSTD_compressBlock_opt_generic(ZSTD_matchState_t* ms,
         /* check further positions */
         for (cur = 1; cur <= last_pos; cur++) {
             const BYTE* const inr = ip + cur;
-            assert(cur < ZSTD_OPT_NUM);
+            assert(cur < ZSTD144_OPT_NUM);
             DEBUGLOG(7, "cPos:%zi==rPos:%u", inr-istart, cur)
 
             /* Fix current position with one literal if cheaper */
             {   U32 const litlen = (opt[cur-1].mlen == 0) ? opt[cur-1].litlen + 1 : 1;
                 int const price = opt[cur-1].price
-                                + ZSTD_rawLiteralsCost(ip+cur-1, 1, optStatePtr, optLevel)
-                                + ZSTD_litLengthPrice(litlen, optStatePtr, optLevel)
-                                - ZSTD_litLengthPrice(litlen-1, optStatePtr, optLevel);
+                                + ZSTD144_rawLiteralsCost(ip+cur-1, 1, optStatePtr, optLevel)
+                                + ZSTD144_litLengthPrice(litlen, optStatePtr, optLevel)
+                                - ZSTD144_litLengthPrice(litlen-1, optStatePtr, optLevel);
                 assert(price < 1000000000); /* overflow check */
                 if (price <= opt[cur].price) {
                     DEBUGLOG(7, "cPos:%zi==rPos:%u : better price (%.2f<=%.2f) using literal (ll==%u) (hist:%u,%u,%u)",
-                                inr-istart, cur, ZSTD_fCost(price), ZSTD_fCost(opt[cur].price), litlen,
+                                inr-istart, cur, ZSTD144_fCost(price), ZSTD144_fCost(opt[cur].price), litlen,
                                 opt[cur-1].rep[0], opt[cur-1].rep[1], opt[cur-1].rep[2]);
                     opt[cur].mlen = 0;
                     opt[cur].off = 0;
@@ -964,7 +964,7 @@ ZSTD_compressBlock_opt_generic(ZSTD_matchState_t* ms,
                     memcpy(opt[cur].rep, opt[cur-1].rep, sizeof(opt[cur].rep));
                 } else {
                     DEBUGLOG(7, "cPos:%zi==rPos:%u : literal would cost more (%.2f>%.2f) (hist:%u,%u,%u)",
-                                inr-istart, cur, ZSTD_fCost(price), ZSTD_fCost(opt[cur].price),
+                                inr-istart, cur, ZSTD144_fCost(price), ZSTD144_fCost(opt[cur].price),
                                 opt[cur].rep[0], opt[cur].rep[1], opt[cur].rep[2]);
                 }
             }
@@ -983,8 +983,8 @@ ZSTD_compressBlock_opt_generic(ZSTD_matchState_t* ms,
             {   U32 const ll0 = (opt[cur].mlen != 0);
                 U32 const litlen = (opt[cur].mlen == 0) ? opt[cur].litlen : 0;
                 U32 const previousPrice = opt[cur].price;
-                U32 const basePrice = previousPrice + ZSTD_litLengthPrice(0, optStatePtr, optLevel);
-                U32 const nbMatches = ZSTD_BtGetAllMatches(matches, ms, &nextToUpdate3, inr, iend, dictMode, opt[cur].rep, ll0, minMatch);
+                U32 const basePrice = previousPrice + ZSTD144_litLengthPrice(0, optStatePtr, optLevel);
+                U32 const nbMatches = ZSTD144_BtGetAllMatches(matches, ms, &nextToUpdate3, inr, iend, dictMode, opt[cur].rep, ll0, minMatch);
                 U32 matchNb;
                 if (!nbMatches) {
                     DEBUGLOG(7, "rPos:%u : no match found", cur);
@@ -996,20 +996,20 @@ ZSTD_compressBlock_opt_generic(ZSTD_matchState_t* ms,
                                 inr-istart, cur, nbMatches, maxML);
 
                     if ( (maxML > sufficient_len)
-                      || (cur + maxML >= ZSTD_OPT_NUM) ) {
+                      || (cur + maxML >= ZSTD144_OPT_NUM) ) {
                         lastSequence.mlen = maxML;
                         lastSequence.off = matches[nbMatches-1].off;
                         lastSequence.litlen = litlen;
                         cur -= (opt[cur].mlen==0) ? opt[cur].litlen : 0;  /* last sequence is actually only literals, fix cur to last match - note : may underflow, in which case, it's first sequence, and it's okay */
-                        last_pos = cur + ZSTD_totalLen(lastSequence);
-                        if (cur > ZSTD_OPT_NUM) cur = 0;   /* underflow => first match */
+                        last_pos = cur + ZSTD144_totalLen(lastSequence);
+                        if (cur > ZSTD144_OPT_NUM) cur = 0;   /* underflow => first match */
                         goto _shortestPath;
                 }   }
 
                 /* set prices using matches found at position == cur */
                 for (matchNb = 0; matchNb < nbMatches; matchNb++) {
                     U32 const offset = matches[matchNb].off;
-                    repcodes_t const repHistory = ZSTD_updateRep(opt[cur].rep, offset, ll0);
+                    repcodes_t const repHistory = ZSTD144_updateRep(opt[cur].rep, offset, ll0);
                     U32 const lastML = matches[matchNb].len;
                     U32 const startML = (matchNb>0) ? matches[matchNb-1].len+1 : minMatch;
                     U32 mlen;
@@ -1019,29 +1019,29 @@ ZSTD_compressBlock_opt_generic(ZSTD_matchState_t* ms,
 
                     for (mlen = lastML; mlen >= startML; mlen--) {  /* scan downward */
                         U32 const pos = cur + mlen;
-                        int const price = basePrice + ZSTD_getMatchPrice(offset, mlen, optStatePtr, optLevel);
+                        int const price = basePrice + ZSTD144_getMatchPrice(offset, mlen, optStatePtr, optLevel);
 
                         if ((pos > last_pos) || (price < opt[pos].price)) {
                             DEBUGLOG(7, "rPos:%u (ml=%2u) => new better price (%.2f<%.2f)",
-                                        pos, mlen, ZSTD_fCost(price), ZSTD_fCost(opt[pos].price));
-                            while (last_pos < pos) { opt[last_pos+1].price = ZSTD_MAX_PRICE; last_pos++; }   /* fill empty positions */
+                                        pos, mlen, ZSTD144_fCost(price), ZSTD144_fCost(opt[pos].price));
+                            while (last_pos < pos) { opt[last_pos+1].price = ZSTD144_MAX_PRICE; last_pos++; }   /* fill empty positions */
                             opt[pos].mlen = mlen;
                             opt[pos].off = offset;
                             opt[pos].litlen = litlen;
                             opt[pos].price = price;
-                            ZSTD_STATIC_ASSERT(sizeof(opt[pos].rep) == sizeof(repHistory));
+                            ZSTD144_STATIC_ASSERT(sizeof(opt[pos].rep) == sizeof(repHistory));
                             memcpy(opt[pos].rep, &repHistory, sizeof(repHistory));
                         } else {
                             DEBUGLOG(7, "rPos:%u (ml=%2u) => new price is worse (%.2f>=%.2f)",
-                                        pos, mlen, ZSTD_fCost(price), ZSTD_fCost(opt[pos].price));
+                                        pos, mlen, ZSTD144_fCost(price), ZSTD144_fCost(opt[pos].price));
                             if (optLevel==0) break;  /* early update abort; gets ~+10% speed for about -0.01 ratio loss */
                         }
             }   }   }
         }  /* for (cur = 1; cur <= last_pos; cur++) */
 
         lastSequence = opt[last_pos];
-        cur = last_pos > ZSTD_totalLen(lastSequence) ? last_pos - ZSTD_totalLen(lastSequence) : 0;  /* single sequence, and it starts before `ip` */
-        assert(cur < ZSTD_OPT_NUM);  /* control overflow*/
+        cur = last_pos > ZSTD144_totalLen(lastSequence) ? last_pos - ZSTD144_totalLen(lastSequence) : 0;  /* single sequence, and it starts before `ip` */
+        assert(cur < ZSTD144_OPT_NUM);  /* control overflow*/
 
 _shortestPath:   /* cur, last_pos, best_mlen, best_off have to be set */
         assert(opt[0].mlen == 0);
@@ -1052,12 +1052,12 @@ _shortestPath:   /* cur, last_pos, best_mlen, best_off have to be set */
 
             DEBUGLOG(6, "start reverse traversal (last_pos:%u, cur:%u)",
                         last_pos, cur); (void)last_pos;
-            assert(storeEnd < ZSTD_OPT_NUM);
+            assert(storeEnd < ZSTD144_OPT_NUM);
             DEBUGLOG(6, "last sequence copied into pos=%u (llen=%u,mlen=%u,ofc=%u)",
                         storeEnd, lastSequence.litlen, lastSequence.mlen, lastSequence.off);
             opt[storeEnd] = lastSequence;
             while (seqPos > 0) {
-                U32 const backDist = ZSTD_totalLen(opt[seqPos]);
+                U32 const backDist = ZSTD144_totalLen(opt[seqPos]);
                 storeStart--;
                 DEBUGLOG(6, "sequence from rPos=%u copied into pos=%u (llen=%u,mlen=%u,ofc=%u)",
                             seqPos, storeStart, opt[seqPos].litlen, opt[seqPos].mlen, opt[seqPos].off);
@@ -1082,27 +1082,27 @@ _shortestPath:   /* cur, last_pos, best_mlen, best_off have to be set */
                         continue;   /* will finish */
                     }
 
-                    /* repcodes update : like ZSTD_updateRep(), but update in place */
-                    if (offCode >= ZSTD_REP_NUM) {  /* full offset */
+                    /* repcodes update : like ZSTD144_updateRep(), but update in place */
+                    if (offCode >= ZSTD144_REP_NUM) {  /* full offset */
                         rep[2] = rep[1];
                         rep[1] = rep[0];
-                        rep[0] = offCode - ZSTD_REP_MOVE;
+                        rep[0] = offCode - ZSTD144_REP_MOVE;
                     } else {   /* repcode */
                         U32 const repCode = offCode + (llen==0);
                         if (repCode) {  /* note : if repCode==0, no change */
-                            U32 const currentOffset = (repCode==ZSTD_REP_NUM) ? (rep[0] - 1) : rep[repCode];
+                            U32 const currentOffset = (repCode==ZSTD144_REP_NUM) ? (rep[0] - 1) : rep[repCode];
                             if (repCode >= 2) rep[2] = rep[1];
                             rep[1] = rep[0];
                             rep[0] = currentOffset;
                     }   }
 
                     assert(anchor + llen <= iend);
-                    ZSTD_updateStats(optStatePtr, llen, anchor, offCode, mlen);
-                    ZSTD_storeSeq(seqStore, llen, anchor, iend, offCode, mlen-MINMATCH);
+                    ZSTD144_updateStats(optStatePtr, llen, anchor, offCode, mlen);
+                    ZSTD144_storeSeq(seqStore, llen, anchor, iend, offCode, mlen-MINMATCH);
                     anchor += advance;
                     ip = anchor;
             }   }
-            ZSTD_setBasePrices(optStatePtr, optLevel);
+            ZSTD144_setBasePrices(optStatePtr, optLevel);
         }
 
     }   /* while (ip < ilimit) */
@@ -1112,22 +1112,22 @@ _shortestPath:   /* cur, last_pos, best_mlen, best_off have to be set */
 }
 
 
-size_t ZSTD_compressBlock_btopt(
-        ZSTD_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
+size_t ZSTD144_compressBlock_btopt(
+        ZSTD144_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD144_REP_NUM],
         const void* src, size_t srcSize)
 {
-    DEBUGLOG(5, "ZSTD_compressBlock_btopt");
-    return ZSTD_compressBlock_opt_generic(ms, seqStore, rep, src, srcSize, 0 /*optLevel*/, ZSTD_noDict);
+    DEBUGLOG(5, "ZSTD144_compressBlock_btopt");
+    return ZSTD144_compressBlock_opt_generic(ms, seqStore, rep, src, srcSize, 0 /*optLevel*/, ZSTD144_noDict);
 }
 
 
 /* used in 2-pass strategy */
-static U32 ZSTD_upscaleStat(unsigned* table, U32 lastEltIndex, int bonus)
+static U32 ZSTD144_upscaleStat(unsigned* table, U32 lastEltIndex, int bonus)
 {
     U32 s, sum=0;
-    assert(ZSTD_FREQ_DIV+bonus >= 0);
+    assert(ZSTD144_FREQ_DIV+bonus >= 0);
     for (s=0; s<lastEltIndex+1; s++) {
-        table[s] <<= ZSTD_FREQ_DIV+bonus;
+        table[s] <<= ZSTD144_FREQ_DIV+bonus;
         table[s]--;
         sum += table[s];
     }
@@ -1135,62 +1135,62 @@ static U32 ZSTD_upscaleStat(unsigned* table, U32 lastEltIndex, int bonus)
 }
 
 /* used in 2-pass strategy */
-MEM_STATIC void ZSTD_upscaleStats(optState_t* optPtr)
+MEM_STATIC void ZSTD144_upscaleStats(optState_t* optPtr)
 {
-    if (ZSTD_compressedLiterals(optPtr))
-        optPtr->litSum = ZSTD_upscaleStat(optPtr->litFreq, MaxLit, 0);
-    optPtr->litLengthSum = ZSTD_upscaleStat(optPtr->litLengthFreq, MaxLL, 0);
-    optPtr->matchLengthSum = ZSTD_upscaleStat(optPtr->matchLengthFreq, MaxML, 0);
-    optPtr->offCodeSum = ZSTD_upscaleStat(optPtr->offCodeFreq, MaxOff, 0);
+    if (ZSTD144_compressedLiterals(optPtr))
+        optPtr->litSum = ZSTD144_upscaleStat(optPtr->litFreq, MaxLit, 0);
+    optPtr->litLengthSum = ZSTD144_upscaleStat(optPtr->litLengthFreq, MaxLL, 0);
+    optPtr->matchLengthSum = ZSTD144_upscaleStat(optPtr->matchLengthFreq, MaxML, 0);
+    optPtr->offCodeSum = ZSTD144_upscaleStat(optPtr->offCodeFreq, MaxOff, 0);
 }
 
-/* ZSTD_initStats_ultra():
+/* ZSTD144_initStats_ultra():
  * make a first compression pass, just to seed stats with more accurate starting values.
  * only works on first block, with no dictionary and no ldm.
  * this function cannot error, hence its contract must be respected.
  */
 static void
-ZSTD_initStats_ultra(ZSTD_matchState_t* ms,
+ZSTD144_initStats_ultra(ZSTD144_matchState_t* ms,
                      seqStore_t* seqStore,
-                     U32 rep[ZSTD_REP_NUM],
+                     U32 rep[ZSTD144_REP_NUM],
                const void* src, size_t srcSize)
 {
-    U32 tmpRep[ZSTD_REP_NUM];  /* updated rep codes will sink here */
+    U32 tmpRep[ZSTD144_REP_NUM];  /* updated rep codes will sink here */
     memcpy(tmpRep, rep, sizeof(tmpRep));
 
-    DEBUGLOG(4, "ZSTD_initStats_ultra (srcSize=%zu)", srcSize);
+    DEBUGLOG(4, "ZSTD144_initStats_ultra (srcSize=%zu)", srcSize);
     assert(ms->opt.litLengthSum == 0);    /* first block */
     assert(seqStore->sequences == seqStore->sequencesStart);   /* no ldm */
     assert(ms->window.dictLimit == ms->window.lowLimit);   /* no dictionary */
     assert(ms->window.dictLimit - ms->nextToUpdate <= 1);  /* no prefix (note: intentional overflow, defined as 2-complement) */
 
-    ZSTD_compressBlock_opt_generic(ms, seqStore, tmpRep, src, srcSize, 2 /*optLevel*/, ZSTD_noDict);   /* generate stats into ms->opt*/
+    ZSTD144_compressBlock_opt_generic(ms, seqStore, tmpRep, src, srcSize, 2 /*optLevel*/, ZSTD144_noDict);   /* generate stats into ms->opt*/
 
     /* invalidate first scan from history */
-    ZSTD_resetSeqStore(seqStore);
+    ZSTD144_resetSeqStore(seqStore);
     ms->window.base -= srcSize;
     ms->window.dictLimit += (U32)srcSize;
     ms->window.lowLimit = ms->window.dictLimit;
     ms->nextToUpdate = ms->window.dictLimit;
 
     /* re-inforce weight of collected statistics */
-    ZSTD_upscaleStats(&ms->opt);
+    ZSTD144_upscaleStats(&ms->opt);
 }
 
-size_t ZSTD_compressBlock_btultra(
-        ZSTD_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
+size_t ZSTD144_compressBlock_btultra(
+        ZSTD144_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD144_REP_NUM],
         const void* src, size_t srcSize)
 {
-    DEBUGLOG(5, "ZSTD_compressBlock_btultra (srcSize=%zu)", srcSize);
-    return ZSTD_compressBlock_opt_generic(ms, seqStore, rep, src, srcSize, 2 /*optLevel*/, ZSTD_noDict);
+    DEBUGLOG(5, "ZSTD144_compressBlock_btultra (srcSize=%zu)", srcSize);
+    return ZSTD144_compressBlock_opt_generic(ms, seqStore, rep, src, srcSize, 2 /*optLevel*/, ZSTD144_noDict);
 }
 
-size_t ZSTD_compressBlock_btultra2(
-        ZSTD_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
+size_t ZSTD144_compressBlock_btultra2(
+        ZSTD144_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD144_REP_NUM],
         const void* src, size_t srcSize)
 {
     U32 const current = (U32)((const BYTE*)src - ms->window.base);
-    DEBUGLOG(5, "ZSTD_compressBlock_btultra2 (srcSize=%zu)", srcSize);
+    DEBUGLOG(5, "ZSTD144_compressBlock_btultra2 (srcSize=%zu)", srcSize);
 
     /* 2-pass strategy:
      * this strategy makes a first pass over first block to collect statistics
@@ -1200,45 +1200,45 @@ size_t ZSTD_compressBlock_btultra2(
      * aka, no dictionary, no prefix, no ldm preprocessing.
      * The compression ratio gain is generally small (~0.5% on first block),
      * the cost is 2x cpu time on first block. */
-    assert(srcSize <= ZSTD_BLOCKSIZE_MAX);
+    assert(srcSize <= ZSTD144_BLOCKSIZE_MAX);
     if ( (ms->opt.litLengthSum==0)   /* first block */
       && (seqStore->sequences == seqStore->sequencesStart)  /* no ldm */
       && (ms->window.dictLimit == ms->window.lowLimit)   /* no dictionary */
       && (current == ms->window.dictLimit)   /* start of frame, nothing already loaded nor skipped */
-      && (srcSize > ZSTD_PREDEF_THRESHOLD)
+      && (srcSize > ZSTD144_PREDEF_THRESHOLD)
       ) {
-        ZSTD_initStats_ultra(ms, seqStore, rep, src, srcSize);
+        ZSTD144_initStats_ultra(ms, seqStore, rep, src, srcSize);
     }
 
-    return ZSTD_compressBlock_opt_generic(ms, seqStore, rep, src, srcSize, 2 /*optLevel*/, ZSTD_noDict);
+    return ZSTD144_compressBlock_opt_generic(ms, seqStore, rep, src, srcSize, 2 /*optLevel*/, ZSTD144_noDict);
 }
 
-size_t ZSTD_compressBlock_btopt_dictMatchState(
-        ZSTD_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
+size_t ZSTD144_compressBlock_btopt_dictMatchState(
+        ZSTD144_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD144_REP_NUM],
         const void* src, size_t srcSize)
 {
-    return ZSTD_compressBlock_opt_generic(ms, seqStore, rep, src, srcSize, 0 /*optLevel*/, ZSTD_dictMatchState);
+    return ZSTD144_compressBlock_opt_generic(ms, seqStore, rep, src, srcSize, 0 /*optLevel*/, ZSTD144_dictMatchState);
 }
 
-size_t ZSTD_compressBlock_btultra_dictMatchState(
-        ZSTD_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
+size_t ZSTD144_compressBlock_btultra_dictMatchState(
+        ZSTD144_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD144_REP_NUM],
         const void* src, size_t srcSize)
 {
-    return ZSTD_compressBlock_opt_generic(ms, seqStore, rep, src, srcSize, 2 /*optLevel*/, ZSTD_dictMatchState);
+    return ZSTD144_compressBlock_opt_generic(ms, seqStore, rep, src, srcSize, 2 /*optLevel*/, ZSTD144_dictMatchState);
 }
 
-size_t ZSTD_compressBlock_btopt_extDict(
-        ZSTD_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
+size_t ZSTD144_compressBlock_btopt_extDict(
+        ZSTD144_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD144_REP_NUM],
         const void* src, size_t srcSize)
 {
-    return ZSTD_compressBlock_opt_generic(ms, seqStore, rep, src, srcSize, 0 /*optLevel*/, ZSTD_extDict);
+    return ZSTD144_compressBlock_opt_generic(ms, seqStore, rep, src, srcSize, 0 /*optLevel*/, ZSTD144_extDict);
 }
 
-size_t ZSTD_compressBlock_btultra_extDict(
-        ZSTD_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
+size_t ZSTD144_compressBlock_btultra_extDict(
+        ZSTD144_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD144_REP_NUM],
         const void* src, size_t srcSize)
 {
-    return ZSTD_compressBlock_opt_generic(ms, seqStore, rep, src, srcSize, 2 /*optLevel*/, ZSTD_extDict);
+    return ZSTD144_compressBlock_opt_generic(ms, seqStore, rep, src, srcSize, 2 /*optLevel*/, ZSTD144_extDict);
 }
 
 /* note : no btultra2 variant for extDict nor dictMatchState,

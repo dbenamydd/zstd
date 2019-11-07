@@ -1,4 +1,4 @@
-package zstd
+package zstd144
 
 import (
 	"testing"

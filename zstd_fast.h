@@ -8,8 +8,8 @@
  * You may select, at your option, one of the above-listed licenses.
  */
 
-#ifndef ZSTD_FAST_H
-#define ZSTD_FAST_H
+#ifndef ZSTD144_FAST_H
+#define ZSTD144_FAST_H
 
 #if defined (__cplusplus)
 extern "C" {
@@ -18,20 +18,20 @@ extern "C" {
 #include "mem.h"      /* U32 */
 #include "zstd_compress_internal.h"
 
-void ZSTD_fillHashTable(ZSTD_matchState_t* ms,
-                        void const* end, ZSTD_dictTableLoadMethod_e dtlm);
-size_t ZSTD_compressBlock_fast(
-        ZSTD_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
+void ZSTD144_fillHashTable(ZSTD144_matchState_t* ms,
+                        void const* end, ZSTD144_dictTableLoadMethod_e dtlm);
+size_t ZSTD144_compressBlock_fast(
+        ZSTD144_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD144_REP_NUM],
         void const* src, size_t srcSize);
-size_t ZSTD_compressBlock_fast_dictMatchState(
-        ZSTD_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
+size_t ZSTD144_compressBlock_fast_dictMatchState(
+        ZSTD144_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD144_REP_NUM],
         void const* src, size_t srcSize);
-size_t ZSTD_compressBlock_fast_extDict(
-        ZSTD_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
+size_t ZSTD144_compressBlock_fast_extDict(
+        ZSTD144_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD144_REP_NUM],
         void const* src, size_t srcSize);
 
 #if defined (__cplusplus)
 }
 #endif
 
-#endif /* ZSTD_FAST_H */
+#endif /* ZSTD144_FAST_H */

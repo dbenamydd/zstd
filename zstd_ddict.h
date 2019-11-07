@@ -9,14 +9,14 @@
  */
 
 
-#ifndef ZSTD_DDICT_H
-#define ZSTD_DDICT_H
+#ifndef ZSTD144_DDICT_H
+#define ZSTD144_DDICT_H
 
 /*-*******************************************************
  *  Dependencies
  *********************************************************/
 #include <stddef.h>   /* size_t */
-#include "zstd.h"     /* ZSTD_DDict, and several public functions */
+#include "zstd.h"     /* ZSTD144_DDict, and several public functions */
 
 
 /*-*******************************************************
@@ -24,21 +24,21 @@
  *********************************************************/
 
 /* note: several prototypes are already published in `zstd.h` :
- * ZSTD_createDDict()
- * ZSTD_createDDict_byReference()
- * ZSTD_createDDict_advanced()
- * ZSTD_freeDDict()
- * ZSTD_initStaticDDict()
- * ZSTD_sizeof_DDict()
- * ZSTD_estimateDDictSize()
- * ZSTD_getDictID_fromDict()
+ * ZSTD144_createDDict()
+ * ZSTD144_createDDict_byReference()
+ * ZSTD144_createDDict_advanced()
+ * ZSTD144_freeDDict()
+ * ZSTD144_initStaticDDict()
+ * ZSTD144_sizeof_DDict()
+ * ZSTD144_estimateDDictSize()
+ * ZSTD144_getDictID_fromDict()
  */
 
-const void* ZSTD_DDict_dictContent(const ZSTD_DDict* ddict);
-size_t ZSTD_DDict_dictSize(const ZSTD_DDict* ddict);
+const void* ZSTD144_DDict_dictContent(const ZSTD144_DDict* ddict);
+size_t ZSTD144_DDict_dictSize(const ZSTD144_DDict* ddict);
 
-void ZSTD_copyDDictParameters(ZSTD_DCtx* dctx, const ZSTD_DDict* ddict);
+void ZSTD144_copyDDictParameters(ZSTD144_DCtx* dctx, const ZSTD144_DDict* ddict);
 
 
 
-#endif /* ZSTD_DDICT_H */
+#endif /* ZSTD144_DDICT_H */

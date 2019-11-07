@@ -12,9 +12,9 @@
 
 #include "error_private.h"
 
-const char* ERR_getErrorString(ERR_enum code)
+const char* ERR144_getErrorString(ERR144_enum code)
 {
-#ifdef ZSTD_STRIP_ERROR_STRINGS
+#ifdef ZSTD144_STRIP_ERROR_STRINGS
     (void)code;
     return "Error strings stripped";
 #else

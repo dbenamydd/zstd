@@ -8,22 +8,22 @@
  * You may select, at your option, one of the above-listed licenses.
  */
 
-#ifndef ZSTD_COMPRESS_LITERALS_H
-#define ZSTD_COMPRESS_LITERALS_H
+#ifndef ZSTD144_COMPRESS_LITERALS_H
+#define ZSTD144_COMPRESS_LITERALS_H
 
-#include "zstd_compress_internal.h" /* ZSTD_hufCTables_t, ZSTD_minGain() */
+#include "zstd_compress_internal.h" /* ZSTD144_hufCTables_t, ZSTD144_minGain() */
 
 
-size_t ZSTD_noCompressLiterals (void* dst, size_t dstCapacity, const void* src, size_t srcSize);
+size_t ZSTD144_noCompressLiterals (void* dst, size_t dstCapacity, const void* src, size_t srcSize);
 
-size_t ZSTD_compressRleLiteralsBlock (void* dst, size_t dstCapacity, const void* src, size_t srcSize);
+size_t ZSTD144_compressRleLiteralsBlock (void* dst, size_t dstCapacity, const void* src, size_t srcSize);
 
-size_t ZSTD_compressLiterals (ZSTD_hufCTables_t const* prevHuf,
-                              ZSTD_hufCTables_t* nextHuf,
-                              ZSTD_strategy strategy, int disableLiteralCompression,
+size_t ZSTD144_compressLiterals (ZSTD144_hufCTables_t const* prevHuf,
+                              ZSTD144_hufCTables_t* nextHuf,
+                              ZSTD144_strategy strategy, int disableLiteralCompression,
                               void* dst, size_t dstCapacity,
                         const void* src, size_t srcSize,
                               void* entropyWorkspace, size_t entropyWorkspaceSize,
                         const int bmi2);
 
-#endif /* ZSTD_COMPRESS_LITERALS_H */
+#endif /* ZSTD144_COMPRESS_LITERALS_H */

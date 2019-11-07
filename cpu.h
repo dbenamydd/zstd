@@ -8,8 +8,8 @@
  * You may select, at your option, one of the above-listed licenses.
  */
 
-#ifndef ZSTD_COMMON_CPU_H
-#define ZSTD_COMMON_CPU_H
+#ifndef ZSTD144_COMMON_CPU_H
+#define ZSTD144_COMMON_CPU_H
 
 /**
  * Implementation taken from folly/CpuId.h
@@ -29,9 +29,9 @@ typedef struct {
     U32 f1d;
     U32 f7b;
     U32 f7c;
-} ZSTD_cpuid_t;
+} ZSTD144_cpuid_t;
 
-MEM_STATIC ZSTD_cpuid_t ZSTD_cpuid(void) {
+MEM_STATIC ZSTD144_cpuid_t ZSTD144_cpuid(void) {
     U32 f1c = 0;
     U32 f1d = 0;
     U32 f7b = 0;
@@ -100,7 +100,7 @@ MEM_STATIC ZSTD_cpuid_t ZSTD_cpuid(void) {
     }
 #endif
     {
-        ZSTD_cpuid_t cpuid;
+        ZSTD144_cpuid_t cpuid;
         cpuid.f1c = f1c;
         cpuid.f1d = f1d;
         cpuid.f7b = f7b;
@@ -110,7 +110,7 @@ MEM_STATIC ZSTD_cpuid_t ZSTD_cpuid(void) {
 }
 
 #define X(name, r, bit)                                                        \
-  MEM_STATIC int ZSTD_cpuid_##name(ZSTD_cpuid_t const cpuid) {                 \
+  MEM_STATIC int ZSTD144_cpuid_##name(ZSTD144_cpuid_t const cpuid) {                 \
     return ((cpuid.r) & (1U << bit)) != 0;                                     \
   }
 
@@ -212,4 +212,4 @@ MEM_STATIC ZSTD_cpuid_t ZSTD_cpuid(void) {
 
 #undef X
 
-#endif /* ZSTD_COMMON_CPU_H */
+#endif /* ZSTD144_COMMON_CPU_H */

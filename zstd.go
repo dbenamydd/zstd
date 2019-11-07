@@ -1,7 +1,7 @@
-package zstd
+package zstd144
 
 /*
-#define ZSTD_STATIC_LINKING_ONLY
+#define ZSTD144_STATIC_LINKING_ONLY
 #include "zstd.h"
 #include "stdint.h"  // for uintptr_t
 
@@ -9,12 +9,12 @@ package zstd
 // memory allocations when calling the wrapped functions from Go code.
 // See https://github.com/golang/go/issues/24450 for details.
 
-static size_t ZSTD_compress_wrapper(uintptr_t dst, size_t maxDstSize, const uintptr_t src, size_t srcSize, int compressionLevel) {
-	return ZSTD_compress((void*)dst, maxDstSize, (const void*)src, srcSize, compressionLevel);
+static size_t ZSTD144_compress_wrapper(uintptr_t dst, size_t maxDstSize, const uintptr_t src, size_t srcSize, int compressionLevel) {
+	return ZSTD144_compress((void*)dst, maxDstSize, (const void*)src, srcSize, compressionLevel);
 }
 
-static size_t ZSTD_decompress_wrapper(uintptr_t dst, size_t maxDstSize, uintptr_t src, size_t srcSize) {
-	return ZSTD_decompress((void*)dst, maxDstSize, (const void *)src, srcSize);
+static size_t ZSTD144_decompress_wrapper(uintptr_t dst, size_t maxDstSize, uintptr_t src, size_t srcSize) {
+	return ZSTD144_decompress((void*)dst, maxDstSize, (const void *)src, srcSize);
 }
 
 */
@@ -42,7 +42,7 @@ var (
 // CompressBound returns the worst case size needed for a destination buffer,
 // which can be used to preallocate a destination buffer or select a previously
 // allocated buffer from a pool.
-// See zstd.h to mirror implementation of ZSTD_COMPRESSBOUND
+// See zstd.h to mirror implementation of ZSTD144_COMPRESSBOUND
 func CompressBound(srcSize int) int {
 	lowLimit := 128 << 10 // 128 kB
 	var margin int
@@ -54,7 +54,7 @@ func CompressBound(srcSize int) int {
 
 // cCompressBound is a cgo call to check the go implementation above against the c code.
 func cCompressBound(srcSize int) int {
-	return int(C.ZSTD_compressBound(C.size_t(srcSize)))
+	return int(C.ZSTD144_compressBound(C.size_t(srcSize)))
 }
 
 // Compress src into dst.  If you have a buffer to use, you can pass it to
@@ -78,7 +78,7 @@ func CompressLevel(dst, src []byte, level int) ([]byte, error) {
 		srcPtr = C.uintptr_t(uintptr(unsafe.Pointer(&src[0])))
 	}
 
-	cWritten := C.ZSTD_compress_wrapper(
+	cWritten := C.ZSTD144_compress_wrapper(
 		C.uintptr_t(uintptr(unsafe.Pointer(&dst[0]))),
 		C.size_t(len(dst)),
 		srcPtr,
@@ -103,7 +103,7 @@ func Decompress(dst, src []byte) ([]byte, error) {
 	}
 	decompress := func(dst, src []byte) ([]byte, error) {
 
-		cWritten := C.ZSTD_decompress_wrapper(
+		cWritten := C.ZSTD144_decompress_wrapper(
 			C.uintptr_t(uintptr(unsafe.Pointer(&dst[0]))),
 			C.size_t(len(dst)),
 			C.uintptr_t(uintptr(unsafe.Pointer(&src[0]))),
@@ -120,7 +120,7 @@ func Decompress(dst, src []byte) ([]byte, error) {
 
 	if len(dst) == 0 {
 		// Attempt to use zStd to determine decompressed size (may result in error or 0)
-		size := int(C.size_t(C.ZSTD_getDecompressedSize(unsafe.Pointer(&src[0]), C.size_t(len(src)))))
+		size := int(C.size_t(C.ZSTD144_getDecompressedSize(unsafe.Pointer(&src[0]), C.size_t(len(src)))))
 
 		if err := getError(size); err != nil {
 			return nil, err

@@ -6,28 +6,28 @@
 #include "pool.h"
 #include "threading.h"
 #include "zstd_internal.h" /* includes zstd.h */
-#ifndef ZDICT_STATIC_LINKING_ONLY
-#define ZDICT_STATIC_LINKING_ONLY
+#ifndef ZDICT144_STATIC_LINKING_ONLY
+#define ZDICT144_STATIC_LINKING_ONLY
 #endif
 #include "zdict.h"
 
 /**
- * COVER_best_t is used for two purposes:
+ * COVER144_best_t is used for two purposes:
  * 1. Synchronizing threads.
  * 2. Saving the best parameters and dictionary.
  *
- * All of the methods except COVER_best_init() are thread safe if zstd is
+ * All of the methods except COVER144_best_init() are thread safe if zstd is
  * compiled with multithreaded support.
  */
-typedef struct COVER_best_s {
-  ZSTD_pthread_mutex_t mutex;
-  ZSTD_pthread_cond_t cond;
+typedef struct COVER144_best_s {
+  ZSTD144_pthread_mutex_t mutex;
+  ZSTD144_pthread_cond_t cond;
   size_t liveJobs;
   void *dict;
   size_t dictSize;
-  ZDICT_cover_params_t parameters;
+  ZDICT144_cover_params_t parameters;
   size_t compressedSize;
-} COVER_best_t;
+} COVER144_best_t;
 
 /**
  * A segment is a range in the source as well as the score of the segment.
@@ -36,7 +36,7 @@ typedef struct {
   U32 begin;
   U32 end;
   U32 score;
-} COVER_segment_t;
+} COVER144_segment_t;
 
 /**
  *Number of epochs and size of each epoch.
@@ -44,16 +44,16 @@ typedef struct {
 typedef struct {
   U32 num;
   U32 size;
-} COVER_epoch_info_t;
+} COVER144_epoch_info_t;
 
 /**
  * Struct used for the dictionary selection function.
  */
-typedef struct COVER_dictSelection {
+typedef struct COVER144_dictSelection {
   BYTE* dictContent;
   size_t dictSize;
   size_t totalCompressedSize;
-} COVER_dictSelection_t;
+} COVER144_dictSelection_t;
 
 /**
  * Computes the number of epochs and the size of each epoch.
@@ -68,18 +68,18 @@ typedef struct COVER_dictSelection {
  * @param passes      The target number of passes over the dmer corpus.
  *                    More passes means a better dictionary.
  */
-COVER_epoch_info_t COVER_computeEpochs(U32 maxDictSize, U32 nbDmers,
+COVER144_epoch_info_t COVER144_computeEpochs(U32 maxDictSize, U32 nbDmers,
                                        U32 k, U32 passes);
 
 /**
  * Warns the user when their corpus is too small.
  */
-void COVER_warnOnSmallCorpus(size_t maxDictSize, size_t nbDmers, int displayLevel);
+void COVER144_warnOnSmallCorpus(size_t maxDictSize, size_t nbDmers, int displayLevel);
 
 /**
  *  Checks total compressed size of a dictionary
  */
-size_t COVER_checkTotalCompressedSize(const ZDICT_cover_params_t parameters,
+size_t COVER144_checkTotalCompressedSize(const ZDICT144_cover_params_t parameters,
                                       const size_t *samplesSizes, const BYTE *samples,
                                       size_t *offsets,
                                       size_t nbTrainSamples, size_t nbSamples,
@@ -88,53 +88,53 @@ size_t COVER_checkTotalCompressedSize(const ZDICT_cover_params_t parameters,
 /**
  * Returns the sum of the sample sizes.
  */
-size_t COVER_sum(const size_t *samplesSizes, unsigned nbSamples) ;
+size_t COVER144_sum(const size_t *samplesSizes, unsigned nbSamples) ;
 
 /**
- * Initialize the `COVER_best_t`.
+ * Initialize the `COVER144_best_t`.
  */
-void COVER_best_init(COVER_best_t *best);
+void COVER144_best_init(COVER144_best_t *best);
 
 /**
  * Wait until liveJobs == 0.
  */
-void COVER_best_wait(COVER_best_t *best);
+void COVER144_best_wait(COVER144_best_t *best);
 
 /**
- * Call COVER_best_wait() and then destroy the COVER_best_t.
+ * Call COVER144_best_wait() and then destroy the COVER144_best_t.
  */
-void COVER_best_destroy(COVER_best_t *best);
+void COVER144_best_destroy(COVER144_best_t *best);
 
 /**
  * Called when a thread is about to be launched.
  * Increments liveJobs.
  */
-void COVER_best_start(COVER_best_t *best);
+void COVER144_best_start(COVER144_best_t *best);
 
 /**
  * Called when a thread finishes executing, both on error or success.
  * Decrements liveJobs and signals any waiting threads if liveJobs == 0.
  * If this dictionary is the best so far save it and its parameters.
  */
-void COVER_best_finish(COVER_best_t *best, ZDICT_cover_params_t parameters,
-                       COVER_dictSelection_t selection);
+void COVER144_best_finish(COVER144_best_t *best, ZDICT144_cover_params_t parameters,
+                       COVER144_dictSelection_t selection);
 /**
- * Error function for COVER_selectDict function. Checks if the return
+ * Error function for COVER144_selectDict function. Checks if the return
  * value is an error.
  */
-unsigned COVER_dictSelectionIsError(COVER_dictSelection_t selection);
+unsigned COVER144_dictSelectionIsError(COVER144_dictSelection_t selection);
 
  /**
-  * Error function for COVER_selectDict function. Returns a struct where
+  * Error function for COVER144_selectDict function. Returns a struct where
   * return.totalCompressedSize is a ZSTD error.
   */
-COVER_dictSelection_t COVER_dictSelectionError(size_t error);
+COVER144_dictSelection_t COVER144_dictSelectionError(size_t error);
 
 /**
  * Always call after selectDict is called to free up used memory from
  * newly created dictionary.
  */
-void COVER_dictSelectionFree(COVER_dictSelection_t selection);
+void COVER144_dictSelectionFree(COVER144_dictSelection_t selection);
 
 /**
  * Called to finalize the dictionary and select one based on whether or not
@@ -142,6 +142,6 @@ void COVER_dictSelectionFree(COVER_dictSelection_t selection);
  * smallest dictionary within a specified regression of the compressed size
  * from the largest dictionary.
  */
- COVER_dictSelection_t COVER_selectDict(BYTE* customDictContent,
+ COVER144_dictSelection_t COVER144_selectDict(BYTE* customDictContent,
                        size_t dictContentSize, const BYTE* samplesBuffer, const size_t* samplesSizes, unsigned nbFinalizeSamples,
-                       size_t nbCheckSamples, size_t nbSamples, ZDICT_cover_params_t params, size_t* offsets, size_t totalCompressedSize);
+                       size_t nbCheckSamples, size_t nbSamples, ZDICT144_cover_params_t params, size_t* offsets, size_t totalCompressedSize);

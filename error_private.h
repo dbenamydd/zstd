@@ -29,44 +29,44 @@ extern "C" {
 *  Compiler-specific
 ******************************************/
 #if defined(__GNUC__)
-#  define ERR_STATIC static __attribute__((unused))
+#  define ERR144_STATIC static __attribute__((unused))
 #elif defined (__cplusplus) || (defined (__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) /* C99 */)
-#  define ERR_STATIC static inline
+#  define ERR144_STATIC static inline
 #elif defined(_MSC_VER)
-#  define ERR_STATIC static __inline
+#  define ERR144_STATIC static __inline
 #else
-#  define ERR_STATIC static  /* this version may generate warnings for unused static functions; disable the relevant warning */
+#  define ERR144_STATIC static  /* this version may generate warnings for unused static functions; disable the relevant warning */
 #endif
 
 
 /*-****************************************
 *  Customization (error_public.h)
 ******************************************/
-typedef ZSTD_ErrorCode ERR_enum;
-#define PREFIX(name) ZSTD_error_##name
+typedef ZSTD144_ErrorCode ERR144_enum;
+#define PREFIX(name) ZSTD144_error_##name
 
 
 /*-****************************************
 *  Error codes handling
 ******************************************/
 #undef ERROR   /* reported already defined on VS 2015 (Rich Geldreich) */
-#define ERROR(name) ZSTD_ERROR(name)
-#define ZSTD_ERROR(name) ((size_t)-PREFIX(name))
+#define ERROR(name) ZSTD144_ERROR(name)
+#define ZSTD144_ERROR(name) ((size_t)-PREFIX(name))
 
-ERR_STATIC unsigned ERR_isError(size_t code) { return (code > ERROR(maxCode)); }
+ERR144_STATIC unsigned ERR144_isError(size_t code) { return (code > ERROR(maxCode)); }
 
-ERR_STATIC ERR_enum ERR_getErrorCode(size_t code) { if (!ERR_isError(code)) return (ERR_enum)0; return (ERR_enum) (0-code); }
+ERR144_STATIC ERR144_enum ERR144_getErrorCode(size_t code) { if (!ERR144_isError(code)) return (ERR144_enum)0; return (ERR144_enum) (0-code); }
 
 
 /*-****************************************
 *  Error Strings
 ******************************************/
 
-const char* ERR_getErrorString(ERR_enum code);   /* error_private.c */
+const char* ERR144_getErrorString(ERR144_enum code);   /* error_private.c */
 
-ERR_STATIC const char* ERR_getErrorName(size_t code)
+ERR144_STATIC const char* ERR144_getErrorName(size_t code)
 {
-    return ERR_getErrorString(ERR_getErrorCode(code));
+    return ERR144_getErrorString(ERR144_getErrorCode(code));
 }
 
 #if defined (__cplusplus)

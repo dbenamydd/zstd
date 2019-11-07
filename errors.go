@@ -1,7 +1,7 @@
-package zstd
+package zstd144
 
 /*
-#define ZSTD_STATIC_LINKING_ONLY
+#define ZSTD144_STATIC_LINKING_ONLY
 #include "zstd.h"
 */
 import "C"
@@ -11,11 +11,11 @@ type ErrorCode int
 
 // Error returns the error string given by zstd
 func (e ErrorCode) Error() string {
-	return C.GoString(C.ZSTD_getErrorName(C.size_t(e)))
+	return C.GoString(C.ZSTD144_getErrorName(C.size_t(e)))
 }
 
 func cIsError(code int) bool {
-	return int(C.ZSTD_isError(C.size_t(code))) != 0
+	return int(C.ZSTD144_isError(C.size_t(code))) != 0
 }
 
 // getError returns an error for the return code, or nil if it's not an error

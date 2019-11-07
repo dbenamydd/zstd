@@ -18,9 +18,9 @@
 *  ZBUFF Error Management  (deprecated)
 ******************************************/
 
-/*! ZBUFF_isError() :
+/*! ZBUFF144_isError() :
 *   tells if a return value is an error code */
-unsigned ZBUFF_isError(size_t errorCode) { return ERR_isError(errorCode); }
-/*! ZBUFF_getErrorName() :
+unsigned ZBUFF144_isError(size_t errorCode) { return ERR144_isError(errorCode); }
+/*! ZBUFF144_getErrorName() :
 *   provides error code string from function result (useful for debugging) */
-const char* ZBUFF_getErrorName(size_t errorCode) { return ERR_getErrorName(errorCode); }
+const char* ZBUFF144_getErrorName(size_t errorCode) { return ERR144_getErrorName(errorCode); }

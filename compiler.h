@@ -8,15 +8,15 @@
  * You may select, at your option, one of the above-listed licenses.
  */
 
-#ifndef ZSTD_COMPILER_H
-#define ZSTD_COMPILER_H
+#ifndef ZSTD144_COMPILER_H
+#define ZSTD144_COMPILER_H
 
 /*-*******************************************************
 *  Compiler specifics
 *********************************************************/
 /* force inlining */
 
-#if !defined(ZSTD_NO_INLINE)
+#if !defined(ZSTD144_NO_INLINE)
 #if defined (__GNUC__) || defined(__cplusplus) || defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L   /* C99 */
 #  define INLINE_KEYWORD inline
 #else
@@ -156,4 +156,4 @@
 #  pragma warning(disable : 4324)        /* disable: C4324: padded structure */
 #endif
 
-#endif /* ZSTD_COMPILER_H */
+#endif /* ZSTD144_COMPILER_H */

@@ -8,8 +8,8 @@
  * You may select, at your option, one of the above-listed licenses.
  */
 
-#ifndef ZSTD_ERRORS_H_398273423
-#define ZSTD_ERRORS_H_398273423
+#ifndef ZSTD144_ERRORS_H_398273423
+#define ZSTD144_ERRORS_H_398273423
 
 #if defined (__cplusplus)
 extern "C" {
@@ -27,9 +27,9 @@ extern "C" {
 #    define ZSTDERRORLIB_VISIBILITY
 #  endif
 #endif
-#if defined(ZSTD_DLL_EXPORT) && (ZSTD_DLL_EXPORT==1)
+#if defined(ZSTD144_DLL144_EXPORT) && (ZSTD144_DLL144_EXPORT==1)
 #  define ZSTDERRORLIB_API __declspec(dllexport) ZSTDERRORLIB_VISIBILITY
-#elif defined(ZSTD_DLL_IMPORT) && (ZSTD_DLL_IMPORT==1)
+#elif defined(ZSTD144_DLL144_IMPORT) && (ZSTD144_DLL144_IMPORT==1)
 #  define ZSTDERRORLIB_API __declspec(dllimport) ZSTDERRORLIB_VISIBILITY /* It isn't required but allows to generate better code, saving a function pointer load from the IAT and an indirect jump.*/
 #else
 #  define ZSTDERRORLIB_API ZSTDERRORLIB_VISIBILITY
@@ -47,47 +47,47 @@ extern "C" {
  *           dynamic linking is not yet officially supported.
  *  note 2 : Prefer relying on the enum than on its value whenever possible
  *           This is the only supported way to use the error list < v1.3.1
- *  note 3 : ZSTD_isError() is always correct, whatever the library version.
+ *  note 3 : ZSTD144_isError() is always correct, whatever the library version.
  **********************************************/
 typedef enum {
-  ZSTD_error_no_error = 0,
-  ZSTD_error_GENERIC  = 1,
-  ZSTD_error_prefix_unknown                = 10,
-  ZSTD_error_version_unsupported           = 12,
-  ZSTD_error_frameParameter_unsupported    = 14,
-  ZSTD_error_frameParameter_windowTooLarge = 16,
-  ZSTD_error_corruption_detected = 20,
-  ZSTD_error_checksum_wrong      = 22,
-  ZSTD_error_dictionary_corrupted      = 30,
-  ZSTD_error_dictionary_wrong          = 32,
-  ZSTD_error_dictionaryCreation_failed = 34,
-  ZSTD_error_parameter_unsupported   = 40,
-  ZSTD_error_parameter_outOfBound    = 42,
-  ZSTD_error_tableLog_tooLarge       = 44,
-  ZSTD_error_maxSymbolValue_tooLarge = 46,
-  ZSTD_error_maxSymbolValue_tooSmall = 48,
-  ZSTD_error_stage_wrong       = 60,
-  ZSTD_error_init_missing      = 62,
-  ZSTD_error_memory_allocation = 64,
-  ZSTD_error_workSpace_tooSmall= 66,
-  ZSTD_error_dstSize_tooSmall = 70,
-  ZSTD_error_srcSize_wrong    = 72,
-  ZSTD_error_dstBuffer_null   = 74,
+  ZSTD144_error_no_error = 0,
+  ZSTD144_error_GENERIC  = 1,
+  ZSTD144_error_prefix_unknown                = 10,
+  ZSTD144_error_version_unsupported           = 12,
+  ZSTD144_error_frameParameter_unsupported    = 14,
+  ZSTD144_error_frameParameter_windowTooLarge = 16,
+  ZSTD144_error_corruption_detected = 20,
+  ZSTD144_error_checksum_wrong      = 22,
+  ZSTD144_error_dictionary_corrupted      = 30,
+  ZSTD144_error_dictionary_wrong          = 32,
+  ZSTD144_error_dictionaryCreation_failed = 34,
+  ZSTD144_error_parameter_unsupported   = 40,
+  ZSTD144_error_parameter_outOfBound    = 42,
+  ZSTD144_error_tableLog_tooLarge       = 44,
+  ZSTD144_error_maxSymbolValue_tooLarge = 46,
+  ZSTD144_error_maxSymbolValue_tooSmall = 48,
+  ZSTD144_error_stage_wrong       = 60,
+  ZSTD144_error_init_missing      = 62,
+  ZSTD144_error_memory_allocation = 64,
+  ZSTD144_error_workSpace_tooSmall= 66,
+  ZSTD144_error_dstSize_tooSmall = 70,
+  ZSTD144_error_srcSize_wrong    = 72,
+  ZSTD144_error_dstBuffer_null   = 74,
   /* following error codes are __NOT STABLE__, they can be removed or changed in future versions */
-  ZSTD_error_frameIndex_tooLarge = 100,
-  ZSTD_error_seekableIO          = 102,
-  ZSTD_error_maxCode = 120  /* never EVER use this value directly, it can change in future versions! Use ZSTD_isError() instead */
-} ZSTD_ErrorCode;
+  ZSTD144_error_frameIndex_tooLarge = 100,
+  ZSTD144_error_seekableIO          = 102,
+  ZSTD144_error_maxCode = 120  /* never EVER use this value directly, it can change in future versions! Use ZSTD144_isError() instead */
+} ZSTD144_ErrorCode;
 
-/*! ZSTD_getErrorCode() :
-    convert a `size_t` function result into a `ZSTD_ErrorCode` enum type,
+/*! ZSTD144_getErrorCode() :
+    convert a `size_t` function result into a `ZSTD144_ErrorCode` enum type,
     which can be used to compare with enum list published above */
-ZSTDERRORLIB_API ZSTD_ErrorCode ZSTD_getErrorCode(size_t functionResult);
-ZSTDERRORLIB_API const char* ZSTD_getErrorString(ZSTD_ErrorCode code);   /**< Same as ZSTD_getErrorName, but using a `ZSTD_ErrorCode` enum argument */
+ZSTDERRORLIB_API ZSTD144_ErrorCode ZSTD144_getErrorCode(size_t functionResult);
+ZSTDERRORLIB_API const char* ZSTD144_getErrorString(ZSTD144_ErrorCode code);   /**< Same as ZSTD144_getErrorName, but using a `ZSTD144_ErrorCode` enum argument */
 
 
 #if defined (__cplusplus)
 }
 #endif
 
-#endif /* ZSTD_ERRORS_H_398273423 */
+#endif /* ZSTD144_ERRORS_H_398273423 */

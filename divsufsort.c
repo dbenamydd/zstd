@@ -1844,7 +1844,7 @@ construct_BWT_indexes(const unsigned char *T, int *SA,
 /*- Function -*/
 
 int
-divsufsort(const unsigned char *T, int *SA, int n, int openMP) {
+divsufsort144(const unsigned char *T, int *SA, int n, int openMP) {
   int *bucket_A, *bucket_B;
   int m;
   int err = 0;
@@ -1873,7 +1873,7 @@ divsufsort(const unsigned char *T, int *SA, int n, int openMP) {
 }
 
 int
-divbwt(const unsigned char *T, unsigned char *U, int *A, int n, unsigned char * num_indexes, int * indexes, int openMP) {
+divbwt144(const unsigned char *T, unsigned char *U, int *A, int n, unsigned char * num_indexes, int * indexes, int openMP) {
   int *B;
   int *bucket_A, *bucket_B;
   int m, pidx, i;
